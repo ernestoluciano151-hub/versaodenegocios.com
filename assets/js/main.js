@@ -164,7 +164,9 @@ let currentCat = 'todos';
 function filterCat(cat) {
   currentCat = cat;
   document.querySelectorAll('[data-cat]').forEach(b => {
-    b.classList.toggle('admin-btn-gold', b.dataset.cat === cat || (cat === 'todos' && b.dataset.cat === 'todos'));
+    const isActive = b.dataset.cat === cat || (cat === 'todos' && b.dataset.cat === 'todos');
+    b.classList.toggle('admin-btn-gold', isActive);
+    b.classList.toggle('admin-btn', !isActive);
   });
   renderGrid();
 }
