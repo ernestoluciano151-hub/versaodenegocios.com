@@ -1,9 +1,6 @@
 # Claude Code local config
 .claude/
 
-# Legacy single-file version
-INDEX.html
-
 # macOS
 .DS_Store
 .AppleDouble
