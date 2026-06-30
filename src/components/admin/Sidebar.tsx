@@ -6,6 +6,7 @@ import {
   LayoutDashboard, Package, Tag, Users, ShoppingBag, CreditCard,
   Warehouse, Plane, Building2, TrendingUp, Megaphone, FileBarChart,
   Settings, Zap, ChevronLeft, ChevronRight, LifeBuoy, Mail,
+  MessageSquare, Star, UserCheck, BarChart3,
 } from 'lucide-react'
 import { useUIStore } from '@/store/ui'
 import { cn } from '@/lib/utils'
@@ -25,6 +26,10 @@ const navItems = [
   { href: '/admin/newsletter', label: 'Newsletter', icon: Mail },
   { href: '/admin/relatorios', label: 'Relatórios', icon: FileBarChart },
   { href: '/admin/suporte', label: 'Suporte', icon: LifeBuoy },
+  { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
+  { href: '/admin/fidelizacao', label: 'Fidelização', icon: Star },
+  { href: '/admin/afiliados', label: 'Afiliados', icon: UserCheck },
+  { href: '/admin/notificacoes', label: 'WhatsApp', icon: MessageSquare },
   { href: '/admin/configuracoes', label: 'Configurações', icon: Settings },
 ]
 
