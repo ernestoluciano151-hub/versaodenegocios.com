@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { ArrowLeft, Plus, Trash2, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Plus, RefreshCw, Upload } from 'lucide-react'
+import { ImageUpload } from '@/components/admin/ImageUpload'
 
 interface Category {
   id: string
@@ -363,22 +364,18 @@ export default function NovoProdutoPage() {
                 <Plus className="w-3 h-3" /> Adicionar
               </Button>
             </div>
-            <p className="text-xs text-gray-400 mb-3">A primeira URL será a imagem principal.</p>
-            <div className="space-y-2">
+            <p className="text-xs text-gray-400 mb-3">A primeira imagem será a principal. Clica em <Upload className="w-3 h-3 inline" /> para fazer upload ou cola uma URL.</p>
+            <div className="space-y-3">
               {images.map((img, i) => (
-                <div key={i} className="flex gap-2 items-center">
-                  <span className="text-xs text-gray-400 w-6 text-right flex-shrink-0">{i + 1}</span>
-                  <Input
-                    value={img}
-                    onChange={(e) => setImage(i, e.target.value)}
-                    placeholder={i === 0 ? 'URL da imagem principal...' : 'URL da imagem...'}
-                  />
-                  {images.length > 1 && (
-                    <Button type="button" variant="ghost" size="sm" onClick={() => removeImage(i)}>
-                      <Trash2 className="w-4 h-4 text-red-400" />
-                    </Button>
-                  )}
-                </div>
+                <ImageUpload
+                  key={i}
+                  index={i}
+                  value={img}
+                  onChange={(url) => setImage(i, url)}
+                  onRemove={() => removeImage(i)}
+                  showRemove={images.length > 1}
+                  placeholder={i === 0 ? 'URL da imagem principal...' : 'URL da imagem...'}
+                />
               ))}
             </div>
           </div>

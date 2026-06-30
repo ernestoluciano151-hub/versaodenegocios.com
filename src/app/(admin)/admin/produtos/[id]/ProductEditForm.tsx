@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { Loader2, Save, Trash2 } from 'lucide-react'
+import { Loader2, Save, Trash2, Plus } from 'lucide-react'
+import { ImageUpload } from '@/components/admin/ImageUpload'
 
 interface Props {
   product: {
@@ -160,13 +161,34 @@ export function ProductEditForm({ product, categories }: Props) {
           />
         </div>
         <div className="col-span-2">
-          <Label>Imagens (URLs, uma por linha)</Label>
-          <textarea
-            value={form.images.join('\n')}
-            onChange={e => setForm(f => ({ ...f, images: e.target.value.split('\n').filter(Boolean) }))}
-            rows={3}
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 resize-y"
-          />
+          <div className="flex items-center justify-between mb-2">
+            <Label>Imagens</Label>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1 h-7 text-xs"
+              onClick={() => setForm(f => ({ ...f, images: [...f.images, ''] }))}
+            >
+              <Plus className="w-3 h-3" /> Adicionar
+            </Button>
+          </div>
+          <div className="space-y-2">
+            {(form.images.length > 0 ? form.images : ['']).map((img, i) => (
+              <ImageUpload
+                key={i}
+                index={i}
+                value={img}
+                onChange={(url) => setForm(f => ({
+                  ...f,
+                  images: f.images.map((im, idx) => idx === i ? url : im)
+                }))}
+                onRemove={() => setForm(f => ({ ...f, images: f.images.filter((_, idx) => idx !== i) }))}
+                showRemove={form.images.length > 1}
+                placeholder={i === 0 ? 'URL da imagem principal...' : 'URL da imagem...'}
+              />
+            ))}
+          </div>
         </div>
       </div>
 
