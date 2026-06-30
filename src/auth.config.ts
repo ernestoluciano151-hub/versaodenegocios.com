@@ -4,7 +4,7 @@ export const authConfig: NextAuthConfig = {
   secret: process.env.NEXTAUTH_SECRET,
   trustHost: true,
   session: { strategy: 'jwt' },
-  pages: { signIn: '/admin/login' },
+  pages: { signIn: '/conta/login' },
   providers: [],
   callbacks: {
     async jwt({ token, user }) {
@@ -23,6 +23,11 @@ export const authConfig: NextAuthConfig = {
         u.role = token.role as string
       }
       return session
+    },
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith('/')) return `${baseUrl}${url}`
+      if (url.startsWith(baseUrl)) return url
+      return `${baseUrl}/conta`
     },
     authorized({ auth, request: { nextUrl } }) {
       const { pathname } = nextUrl
