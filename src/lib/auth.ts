@@ -24,17 +24,29 @@ async function findOrCreateCustomer(profile: { email: string; name?: string | nu
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
+  callbacks: {
+    ...authConfig.callbacks,
+    async signIn({ user, account }) {
+      console.log('[signIn callback] provider:', account?.provider, 'user:', user?.email)
+      return true
+    },
+  },
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       async profile(profile) {
-        const customer = await findOrCreateCustomer({
-          email: profile.email,
-          name: profile.name,
-          image: profile.picture,
-        })
-        return { id: customer.id, name: customer.name, email: customer.email, image: customer.avatar, type: 'customer' }
+        try {
+          const customer = await findOrCreateCustomer({
+            email: profile.email,
+            name: profile.name,
+            image: profile.picture,
+          })
+          return { id: customer.id, name: customer.name, email: customer.email, image: customer.avatar, type: 'customer' }
+        } catch (err) {
+          console.error('[Google OAuth] findOrCreateCustomer error:', err)
+          throw err
+        }
       },
     }),
     MicrosoftEntraId({
