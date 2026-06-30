@@ -7,6 +7,7 @@ import { Zap, Loader2, Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { SocialLoginButtons } from '@/components/store/SocialLoginButtons'
 
 function LoginForm() {
   const router = useRouter()
@@ -82,6 +83,10 @@ export default function ContaLoginPage() {
           <Suspense fallback={null}>
             <LoginForm />
           </Suspense>
+
+          <div className="mt-6">
+            <SocialLoginButtons callbackUrl="/conta" label="entrar" />
+          </div>
 
           <div className="mt-6 pt-6 border-t border-gray-100 text-center text-sm text-gray-500">
             Não tem conta?{' '}

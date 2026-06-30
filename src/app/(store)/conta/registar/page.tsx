@@ -7,6 +7,7 @@ import { Zap, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { SocialLoginButtons } from '@/components/store/SocialLoginButtons'
 
 export default function ContaRegistarPage() {
   const router = useRouter()
@@ -78,6 +79,9 @@ export default function ContaRegistarPage() {
               Criar conta
             </Button>
           </form>
+          <div className="mt-6">
+            <SocialLoginButtons callbackUrl="/conta" label="registar" />
+          </div>
           <div className="mt-6 pt-6 border-t border-gray-100 text-center text-sm text-gray-500">
             Já tem conta?{' '}
             <Link href="/conta/login" className="text-orange-500 hover:underline font-medium">Entrar</Link>
