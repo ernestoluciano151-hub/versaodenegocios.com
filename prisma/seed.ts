@@ -13,11 +13,11 @@ async function main() {
   // ─── Admin user ───────────────────────────────────────────────────────────
   const hashedAdminPassword = await bcrypt.hash('admin123', 12)
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@vn-tech.ao' },
+    where: { email: 'admin@versaodenegocios.com' },
     update: {},
     create: {
       name: 'Administrador',
-      email: 'admin@vn-tech.ao',
+      email: 'admin@versaodenegocios.com',
       password: hashedAdminPassword,
       role: 'SUPER_ADMIN',
     },
@@ -27,11 +27,11 @@ async function main() {
   // ─── Test customer ────────────────────────────────────────────────────────
   const hashedCustomerPassword = await bcrypt.hash('cliente123', 12)
   const customer = await prisma.customer.upsert({
-    where: { email: 'cliente@vn-tech.ao' },
+    where: { email: 'cliente@versaodenegocios.com' },
     update: {},
     create: {
       name: 'João Silva',
-      email: 'cliente@vn-tech.ao',
+      email: 'cliente@versaodenegocios.com',
       password: hashedCustomerPassword,
       phone: '+244 923 456 789',
       active: true,
@@ -771,7 +771,7 @@ async function main() {
           customerId: customer.id,
           type: 'order_delivered',
           title: 'Pedido entregue!',
-          message: 'O seu pedido foi entregue com sucesso. Obrigado pela sua compra na VN Tech!',
+          message: 'O seu pedido foi entregue com sucesso. Obrigado pela sua compra na VN Commerce!',
           read: true,
           createdAt: new Date('2024-02-15T15:00:00Z'),
         },
@@ -843,10 +843,10 @@ async function main() {
   console.log('\n🎉 Seed concluído com sucesso!')
   console.log('\n📋 Credenciais de acesso:')
   console.log('   ─── Admin ──────────────────────')
-  console.log('   Email: admin@vn-tech.ao')
+  console.log('   Email: admin@versaodenegocios.com')
   console.log('   Senha: admin123')
   console.log('   ─── Cliente de Teste ───────────')
-  console.log('   Email: cliente@vn-tech.ao')
+  console.log('   Email: cliente@versaodenegocios.com')
   console.log('   Senha: cliente123')
   console.log('   Nome:  João Silva')
   console.log('   ─── Cupões ─────────────────────')

@@ -5,12 +5,12 @@ import { CartDrawer } from '@/components/store/CartDrawer'
 import { SearchModal } from '@/components/store/SearchModal'
 
 export const metadata: Metadata = {
-  title: { default: 'VN Tech — Produtos Eletrónicos', template: '%s | VN Tech' },
+  title: { default: 'VN Commerce — Produtos Eletrónicos', template: '%s | VN Commerce' },
   description: 'Especialistas em produtos eletrónicos importados. Smartphones, computadores, áudio, TV e muito mais.',
   openGraph: {
     type: 'website',
     locale: 'pt_AO',
-    siteName: 'VN Tech',
+    siteName: 'VN Commerce',
   },
 }
 

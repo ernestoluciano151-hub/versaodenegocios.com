@@ -80,7 +80,7 @@ export default async function ConfiguracoesPage() {
           <h2 className="font-semibold text-gray-900 mb-4">Informação do Sistema</h2>
           <dl className="grid grid-cols-2 gap-3 text-sm">
             {[
-              ['Plataforma', 'VN Tech Shop'],
+              ['Plataforma', 'VN Commerce Shop'],
               ['Versão', '1.0.0'],
               ['Framework', 'Next.js 14 (App Router)'],
               ['Base de Dados', 'PostgreSQL (Prisma ORM)'],

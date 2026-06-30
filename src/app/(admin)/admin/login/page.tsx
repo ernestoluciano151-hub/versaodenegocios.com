@@ -43,7 +43,7 @@ export default function AdminLoginPage() {
             <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
               <Zap className="w-6 h-6 text-white" />
             </div>
-            <span className="text-2xl font-bold text-white">VN Tech</span>
+            <span className="text-2xl font-bold text-white">VN Commerce</span>
           </div>
         </div>
 
@@ -62,7 +62,7 @@ export default function AdminLoginPage() {
                 {...register('email')}
                 error={errors.email?.message}
                 className="mt-1"
-                placeholder="admin@vn-tech.ao"
+                placeholder="admin@versaodenegocios.com"
               />
             </div>
             <div>

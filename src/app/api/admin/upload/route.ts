@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData()
     const file = formData.get('file') as File | null
-    const folder = (formData.get('folder') as string) || 'vn-tech/products'
+    const folder = (formData.get('folder') as string) || 'vn-commerce/products'
 
     if (!file) {
       return NextResponse.json({ error: 'Ficheiro não encontrado' }, { status: 400 })

@@ -4,8 +4,8 @@ function getResend() {
   return new Resend(process.env.RESEND_API_KEY ?? 'placeholder')
 }
 
-const FROM = process.env.EMAIL_FROM ?? 'noreply@vn-tech.ao'
-const APP_NAME = 'VN Tech'
+const FROM = process.env.EMAIL_FROM ?? 'noreply@versaodenegocios.com'
+const APP_NAME = 'VN Commerce'
 
 export async function sendOrderConfirmation(to: string, order: {
   id: string

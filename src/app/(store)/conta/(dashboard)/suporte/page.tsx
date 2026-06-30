@@ -133,7 +133,7 @@ export default function ContaSuportePage() {
               </div>
               {t.adminReply && (
                 <div className="border-l-4 border-orange-500 pl-4 bg-orange-50 rounded-r-lg p-3">
-                  <p className="text-xs font-semibold text-orange-600 mb-1">Resposta da equipa VN Tech</p>
+                  <p className="text-xs font-semibold text-orange-600 mb-1">Resposta da equipa VN Commerce</p>
                   <p className="text-sm text-gray-700">{t.adminReply}</p>
                   {t.repliedAt && <p className="text-xs text-gray-400 mt-1">{new Date(t.repliedAt).toLocaleDateString('pt-AO', { dateStyle: 'medium' })}</p>}
                 </div>

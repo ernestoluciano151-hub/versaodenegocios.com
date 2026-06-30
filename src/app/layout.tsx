@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: { default: 'VN Tech — Produtos Eletrónicos', template: '%s | VN Tech' },
+  title: { default: 'VN Commerce — Produtos Eletrónicos', template: '%s | VN Commerce' },
   description: 'Especialistas em produtos eletrónicos importados. Smartphones, computadores, áudio, TV e muito mais.',
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'),
 }

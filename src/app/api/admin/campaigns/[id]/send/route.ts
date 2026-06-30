@@ -31,7 +31,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     const batch = subscribers.slice(i, i + batchSize)
     await resend.batch.send(
       batch.map(sub => ({
-        from: `VN Tech <${FROM}>`,
+        from: `VN Commerce <${FROM}>`,
         to: sub.email,
         subject: campaign.subject,
         html: `
@@ -39,7 +39,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
             ${campaign.body}
             <hr style="border:none;border-top:1px solid #eee;margin:32px 0"/>
             <p style="color:#999;font-size:11px;text-align:center">
-              Recebeu este email porque subscreveu a newsletter da VN Tech.
+              Recebeu este email porque subscreveu a newsletter da VN Commerce.
             </p>
           </div>
         `,

@@ -44,7 +44,7 @@ export function Sidebar() {
         <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center flex-shrink-0">
           <Zap className="w-5 h-5 text-white" />
         </div>
-        {sidebarOpen && <span className="font-bold text-white truncate">VN Tech Admin</span>}
+        {sidebarOpen && <span className="font-bold text-white truncate">VN Commerce Admin</span>}
       </div>
 
       {/* Nav */}

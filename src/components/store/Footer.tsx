@@ -12,7 +12,7 @@ export function Footer() {
               <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
                 <Zap className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold text-white">VN Tech</span>
+              <span className="text-xl font-bold text-white">VN Commerce</span>
             </div>
             <p className="text-sm leading-relaxed">
               Especialistas em produtos eletrónicos importados. Qualidade garantida, preços competitivos.
@@ -74,7 +74,7 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-orange-400 flex-shrink-0" />
-                <span>info@vn-tech.ao</span>
+                <span>info@versaodenegocios.com</span>
               </li>
             </ul>
           </div>
@@ -83,7 +83,7 @@ export function Footer() {
 
       <div className="border-t border-gray-800">
         <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-500">
-          <p>© {new Date().getFullYear()} VN Tech. Todos os direitos reservados.</p>
+          <p>© {new Date().getFullYear()} VN Commerce. Todos os direitos reservados.</p>
           <p>Desenvolvido em Angola 🇦🇴</p>
         </div>
       </div>

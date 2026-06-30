@@ -41,7 +41,7 @@ export default function ContaFavoritosPage() {
 
   async function shareList() {
     try {
-      await navigator.share({ title: 'Os meus favoritos — VN Tech', url: window.location.href })
+      await navigator.share({ title: 'Os meus favoritos — VN Commerce', url: window.location.href })
     } catch {
       await navigator.clipboard.writeText(window.location.href)
       alert('Link copiado!')

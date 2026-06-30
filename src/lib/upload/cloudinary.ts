@@ -6,7 +6,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 })
 
-export async function uploadImage(file: string, folder = 'vn-tech/products') {
+export async function uploadImage(file: string, folder = 'vn-commerce/products') {
   const result = await cloudinary.uploader.upload(file, {
     folder,
     resource_type: 'image',

@@ -35,9 +35,9 @@ export async function POST(req: NextRequest) {
   const resetUrl = `${SITE_URL}/conta/redefinir-password?token=${token}`
 
   await resend.emails.send({
-    from: `VN Tech <${FROM}>`,
+    from: `VN Commerce <${FROM}>`,
     to: email,
-    subject: 'Recuperação de palavra-passe — VN Tech',
+    subject: 'Recuperação de palavra-passe — VN Commerce',
     html: `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
         <h2 style="color:#111">Recuperar palavra-passe</h2>
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
         </a>
         <p style="color:#666;font-size:13px">Se não pediu a recuperação, pode ignorar este email.</p>
         <hr style="border:none;border-top:1px solid #eee;margin:24px 0"/>
-        <p style="color:#999;font-size:12px">VN Tech — Produtos Eletrónicos</p>
+        <p style="color:#999;font-size:12px">VN Commerce — Produtos Eletrónicos</p>
       </div>
     `,
   })

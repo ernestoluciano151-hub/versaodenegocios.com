@@ -112,7 +112,7 @@ export default function RedefinirPasswordPage() {
             <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
               <Zap className="w-6 h-6 text-white" />
             </div>
-            <span className="text-2xl font-bold text-gray-900">VN Tech</span>
+            <span className="text-2xl font-bold text-gray-900">VN Commerce</span>
           </Link>
           <h1 className="text-2xl font-bold text-gray-900">Nova palavra-passe</h1>
           <p className="text-gray-500 mt-1">Escolha uma palavra-passe segura</p>

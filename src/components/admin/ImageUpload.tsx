@@ -23,7 +23,7 @@ export function ImageUpload({
   showRemove = false,
   placeholder = 'URL da imagem ou clique para fazer upload...',
   index,
-  folder = 'vn-tech/products',
+  folder = 'vn-commerce/products',
 }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')

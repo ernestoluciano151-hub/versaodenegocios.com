@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Sidebar } from '@/components/admin/Sidebar'
 
 export const metadata: Metadata = {
-  title: { default: 'Admin — VN Tech', template: '%s | Admin VN Tech' },
+  title: { default: 'Admin — VN Commerce', template: '%s | Admin VN Commerce' },
   robots: 'noindex,nofollow',
 }
 
