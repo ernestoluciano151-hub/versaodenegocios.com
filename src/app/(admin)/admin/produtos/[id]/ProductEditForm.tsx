@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Loader2, Save, Trash2, Plus } from 'lucide-react'
+
 import { ImageUpload } from '@/components/admin/ImageUpload'
 
 interface Props {
