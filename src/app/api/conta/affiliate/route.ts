@@ -3,16 +3,13 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import crypto from 'crypto'
 
-function getCustomer(session: Awaited<ReturnType<typeof auth>>) {
-  const u = session?.user as { id?: string; type?: string } | undefined
-  return u?.type === 'customer' ? u : null
-}
-
 // GET — get affiliate profile
 export async function GET() {
   const session = await auth()
-  const user = getCustomer(session)
-  if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  const user = session?.user as { id?: string; type?: string } | undefined
+  if (!session || user?.type !== 'customer') {
+    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  }
 
   const affiliate = await prisma.affiliate.findUnique({
     where: { customerId: user.id! },
@@ -28,8 +25,10 @@ export async function GET() {
 // POST — apply to become an affiliate
 export async function POST(_req: NextRequest) {
   const session = await auth()
-  const user = getCustomer(session)
-  if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  const user = session?.user as { id?: string; type?: string } | undefined
+  if (!session || user?.type !== 'customer') {
+    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  }
 
   const existing = await prisma.affiliate.findUnique({ where: { customerId: user.id! } })
   if (existing) return NextResponse.json(existing)
