@@ -78,13 +78,16 @@ export function CampaignManager({ initialCampaigns }: { initialCampaigns: Campai
   }
 
   async function sendNow(c: Campaign) {
-    setSendingId(c.id)
+    if (!confirm(`Enviar "${c.name}" para todos os subscritores activos?`)) return
+    setSendingId(c.id); setError(null)
     try {
-      const res = await fetch(`/api/admin/campaigns/${c.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'sent', sentAt: new Date().toISOString() }) })
-      if (!res.ok) return
-      const updated: Campaign = await res.json()
-      setCampaigns(prev => prev.map(x => x.id === c.id ? updated : x))
-    } finally { setSendingId(null) }
+      const res = await fetch(`/api/admin/campaigns/${c.id}/send`, { method: 'POST' })
+      const d = await res.json()
+      if (!res.ok) { setError(d.error ?? 'Erro ao enviar'); return }
+      setCampaigns(prev => prev.map(x => x.id === c.id ? d.campaign : x))
+      alert(`✅ Campanha enviada para ${d.sent} subscritores!`)
+    } catch { setError('Erro ao enviar campanha') }
+    finally { setSendingId(null) }
   }
 
   async function deleteCampaign(id: string) {

@@ -54,6 +54,11 @@ function LoginForm() {
         {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
         Entrar
       </Button>
+      <div className="text-right">
+        <Link href="/conta/recuperar-password" className="text-sm text-orange-500 hover:underline">
+          Esqueceu a palavra-passe?
+        </Link>
+      </div>
     </form>
   )
 }

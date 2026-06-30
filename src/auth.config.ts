@@ -40,7 +40,9 @@ export const authConfig: NextAuthConfig = {
       if (
         pathname.startsWith('/conta') &&
         !pathname.startsWith('/conta/login') &&
-        !pathname.startsWith('/conta/registar')
+        !pathname.startsWith('/conta/registar') &&
+        !pathname.startsWith('/conta/recuperar-password') &&
+        !pathname.startsWith('/conta/redefinir-password')
       ) {
         if (!token || type !== 'customer') {
           const loginUrl = new URL('/conta/login', nextUrl)

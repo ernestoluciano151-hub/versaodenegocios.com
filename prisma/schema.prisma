@@ -131,7 +131,22 @@ model Customer {
   leads          Lead[]
   supportTickets SupportTicket[]
 
+  passwordResetTokens PasswordResetToken[]
+
   @@map("customers")
+}
+
+model PasswordResetToken {
+  id         String   @id @default(cuid())
+  token      String   @unique
+  customerId String
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
 }
 
 model Address {
