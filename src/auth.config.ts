@@ -7,11 +7,15 @@ export const authConfig: NextAuthConfig = {
   pages: { signIn: '/conta/login' },
   providers: [],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id
         token.type = (user as { type?: string }).type ?? 'admin'
         token.role = (user as { role?: string }).role
+      }
+      // OAuth providers (Google, Microsoft, Apple) are always customers
+      if (account?.provider && account.provider !== 'admin-credentials' && account.provider !== 'customer-credentials') {
+        token.type = 'customer'
       }
       return token
     },
