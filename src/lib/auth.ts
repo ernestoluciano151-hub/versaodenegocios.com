@@ -1,8 +1,6 @@
 import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import Google from 'next-auth/providers/google'
-import MicrosoftEntraId from 'next-auth/providers/microsoft-entra-id'
-import Apple from 'next-auth/providers/apple'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { authConfig } from '@/auth.config'
@@ -55,30 +53,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: profile.email,
           name: profile.name,
           image: profile.picture,
-        })
-        return { id: customer.id, name: customer.name, email: customer.email, image: customer.avatar, type: 'customer' }
-      },
-    }),
-    MicrosoftEntraId({
-      clientId: process.env.MICROSOFT_CLIENT_ID!,
-      clientSecret: process.env.MICROSOFT_CLIENT_SECRET!,
-      async profile(profile) {
-        const customer = await findOrCreateCustomer({
-          email: profile.email ?? profile.preferred_username,
-          name: profile.name,
-          image: null,
-        })
-        return { id: customer.id, name: customer.name, email: customer.email, image: customer.avatar, type: 'customer' }
-      },
-    }),
-    Apple({
-      clientId: process.env.APPLE_ID!,
-      clientSecret: process.env.APPLE_SECRET!,
-      async profile(profile) {
-        const customer = await findOrCreateCustomer({
-          email: profile.email,
-          name: profile.name ? `${profile.name.firstName ?? ''} ${profile.name.lastName ?? ''}`.trim() : null,
-          image: null,
         })
         return { id: customer.id, name: customer.name, email: customer.email, image: customer.avatar, type: 'customer' }
       },
