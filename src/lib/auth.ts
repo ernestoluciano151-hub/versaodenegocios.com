@@ -26,9 +26,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   callbacks: {
     ...authConfig.callbacks,
-    async signIn({ user, account }) {
-      console.log('[signIn callback] provider:', account?.provider, 'user:', user?.email)
-      return true
+    async jwt({ token, user, account }) {
+      // Base behaviour from authConfig
+      if (user) {
+        token.id = user.id
+        token.type = (user as { type?: string }).type ?? 'admin'
+        token.role = (user as { role?: string }).role
+      }
+      // OAuth providers — always customer, and ensure we store the DB customer ID
+      // (NextAuth v5 may override user.id with the OAuth sub instead of our DB id)
+      if (account?.provider && !['admin-credentials', 'customer-credentials'].includes(account.provider)) {
+        token.type = 'customer'
+        const email = (user?.email ?? token.email) as string | undefined
+        if (email) {
+          const customer = await prisma.customer.findUnique({ where: { email } })
+          if (customer) token.id = customer.id
+        }
+      }
+      return token
     },
   },
   providers: [
