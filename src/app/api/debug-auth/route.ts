@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { getCustomerSession } from '@/lib/customer-auth'
 
 export async function GET() {
   try {
     const session = await auth()
-    return NextResponse.json({ 
+    const customerSession = await getCustomerSession()
+    return NextResponse.json({
       session,
+      customerSession,
       env: {
         hasGoogleId: !!process.env.GOOGLE_CLIENT_ID,
         hasGoogleSecret: !!process.env.GOOGLE_CLIENT_SECRET,
