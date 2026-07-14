@@ -1,7 +1,12 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAdmin } from '@/lib/admin-auth'
 
 export async function GET() {
+  const { error } = await requireAdmin()
+  if (error) return error
+
+
   const expenses = await prisma.expense.findMany({
     orderBy: { date: 'desc' },
     take: 50,
@@ -11,6 +16,10 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const { error } = await requireAdmin()
+  if (error) return error
+
+
   const body = await req.json()
   const { category, description, amount, currency, date, supplierId, notes } = body
   const expense = await prisma.expense.create({

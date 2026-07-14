@@ -19,7 +19,11 @@ const nextConfig: NextConfig = {
 
   // ─── Experimental ────────────────────────────────────────────────────────────
   experimental: {
-    serverActions: { allowedOrigins: ['localhost:3000', 'versaodenegocios.com'] },
+    serverActions: {
+      allowedOrigins: process.env.NODE_ENV === 'production'
+        ? ['versaodenegocios.com']
+        : ['localhost:3000', 'versaodenegocios.com'],
+    },
     optimizePackageImports: ['lucide-react', 'recharts', '@radix-ui/react-tabs', '@radix-ui/react-dialog'],
   },
 
@@ -38,6 +42,21 @@ const nextConfig: NextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' },
           { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "font-src 'self' https://fonts.gstatic.com",
+              "img-src 'self' data: blob: https://res.cloudinary.com https://via.placeholder.com https://images.unsplash.com https://cdn.shopify.com https://lh3.googleusercontent.com https://avatars.githubusercontent.com",
+              "connect-src 'self' https://accounts.google.com https://res.cloudinary.com",
+              "frame-src 'self' https://accounts.google.com",
+              "form-action 'self' https://accounts.google.com",
+              "base-uri 'self'",
+              "object-src 'none'",
+            ].join('; '),
+          },
         ],
       },
       {

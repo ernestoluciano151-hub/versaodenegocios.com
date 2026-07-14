@@ -330,6 +330,9 @@ model Order {
   payments     Payment[]
   couponUsages CouponUsage[]
 
+  @@index([customerId])
+  @@index([status])
+  @@index([createdAt])
   @@map("orders")
 }
 
@@ -345,6 +348,8 @@ model OrderItem {
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id])
 
+  @@index([orderId])
+  @@index([productId])
   @@map("order_items")
 }
 
@@ -365,6 +370,9 @@ model Payment {
   order    Order     @relation(fields: [orderId], references: [id])
   customer Customer? @relation(fields: [customerId], references: [id])
 
+  @@index([orderId])
+  @@index([customerId])
+  @@index([paymentStatus])
   @@map("payments")
 }
 

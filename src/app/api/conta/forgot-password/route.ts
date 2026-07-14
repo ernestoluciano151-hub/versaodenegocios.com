@@ -2,12 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Resend } from 'resend'
 import crypto from 'crypto'
+import { rateLimit } from '@/lib/rate-limit'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const SITE_URL = process.env.NEXTAUTH_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'https://vn-tech-store.vercel.app'
 const FROM = process.env.EMAIL_FROM ?? 'onboarding@resend.dev'
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown'
+  const rl = rateLimit(`forgot-pw:${ip}`, 3, 15 * 60_000) // 3 attempts per 15 min
+  if (!rl.allowed) {
+    return NextResponse.json({ error: 'Demasiadas tentativas. Tente novamente mais tarde.' }, { status: 429 })
+  }
+
   const { email } = await req.json()
   if (!email) return NextResponse.json({ error: 'Email obrigatório' }, { status: 400 })
 

@@ -2,11 +2,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getPaymentProvider } from '@/lib/payments'
 import { sendOrderConfirmation, sendAdminNewOrder } from '@/lib/email'
+import { awardPurchasePoints } from '@/lib/loyalty'
+import { checkoutSchema } from '@/lib/validations'
 import type { CartItem } from '@/types'
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { name, email, phone, street, city, province, country, notes, paymentMethod, items, totals, couponCode } = body
+
+  const parsed = checkoutSchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Dados inválidos.' }, { status: 400 })
+  }
+
+  const { name, email, phone, street, city, province, country, notes, paymentMethod, couponCode } = parsed.data
+  const { items, totals } = body
 
   if (!items?.length) return NextResponse.json({ error: 'Carrinho vazio.' }, { status: 400 })
 
@@ -111,6 +120,13 @@ export async function POST(req: NextRequest) {
       where: { id: customerId },
       data: { totalSpent: { increment: totals.total }, ordersCount: { increment: 1 } },
     })
+  }
+
+  // Award loyalty points (best-effort)
+  if (customerId) {
+    try {
+      await awardPurchasePoints(customerId, totals.total, order.id)
+    } catch { /* loyalty failure should not block order */ }
   }
 
   // Send emails (best-effort)
