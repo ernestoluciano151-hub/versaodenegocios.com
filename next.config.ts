@@ -37,6 +37,7 @@ const nextConfig: NextConfig = {
           { key: 'X-XSS-Protection', value: '1; mode=block' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' },
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
         ],
       },
       {
@@ -64,6 +65,13 @@ const nextConfig: NextConfig = {
   // ─── Redirects ───────────────────────────────────────────────────────────────
   async redirects() {
     return [
+      // www → non-www canonical redirect
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'www.versaodenegocios.com' }],
+        destination: 'https://versaodenegocios.com/:path*',
+        permanent: true,
+      },
       {
         source: '/admin',
         destination: '/admin',
