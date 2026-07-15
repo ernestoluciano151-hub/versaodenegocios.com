@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdminUser } from '@/lib/admin-auth'
+import { requireAdmin } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
@@ -9,7 +9,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; noteId: string }> }
 ) {
   try {
-    await requireAdminUser()
+    await requireAdmin()
   } catch {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }

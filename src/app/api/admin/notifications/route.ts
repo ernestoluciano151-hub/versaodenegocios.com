@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAdminUser } from '@/lib/admin-auth'
+import { requireAdmin } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
-  try { await requireAdminUser() } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
+  try { await requireAdmin() } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
 
   const { searchParams } = new URL(req.url)
   const read = searchParams.get('read')
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  try { await requireAdminUser() } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
+  try { await requireAdmin() } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
 
   const body = await req.json()
   const notification = await prisma.notification.create({

@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAdminUser } from '@/lib/admin-auth'
+import { requireAdmin } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  try { await requireAdminUser() } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
+  try { await requireAdmin() } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
 
   const stats = await prisma.notification.groupBy({
     by: ['type'],
