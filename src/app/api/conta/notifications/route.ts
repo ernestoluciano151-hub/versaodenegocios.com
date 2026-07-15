@@ -1,14 +1,32 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getCustomerSession } from '@/lib/customer-auth'
+import { requireCustomerSession } from '@/lib/customer-auth'
 
-export async function GET() {
-  const session = await getCustomerSession()
-  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+export const dynamic = 'force-dynamic'
+
+export async function GET(req: NextRequest) {
+  let customer
+  try { customer = await requireCustomerSession() } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
+
   const notifications = await prisma.notification.findMany({
-    where: { customerId: session.id },
+    where: { customerId: customer.id },
     orderBy: { createdAt: 'desc' },
-    take: 50,
+    take: 30,
   })
-  return NextResponse.json(notifications)
+
+  const unreadCount = notifications.filter(n => !n.read).length
+
+  return NextResponse.json({ notifications, unreadCount })
+}
+
+export async function PATCH(req: NextRequest) {
+  let customer
+  try { customer = await requireCustomerSession() } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
+
+  const result = await prisma.notification.updateMany({
+    where: { customerId: customer.id, read: false },
+    data: { read: true },
+  })
+
+  return NextResponse.json({ ok: true, updated: result.count })
 }

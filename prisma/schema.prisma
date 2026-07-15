@@ -166,6 +166,51 @@ enum NotificationChannel {
   in_app
 }
 
+enum ProductVisibility {
+  visible
+  hidden
+  maintenance
+  out_of_stock
+  catalog_only
+  members_only
+  affiliates_only
+  archived
+}
+
+enum CustomOrderStatus {
+  received
+  analyzing
+  negotiating
+  approved
+  rejected
+  purchasing
+  in_transit
+  delivered
+  cancelled
+}
+
+enum CustomOrderOrigin {
+  china
+  usa
+  portugal
+  brazil
+  other
+}
+
+enum FraudRiskLevel {
+  low
+  medium
+  high
+  critical
+}
+
+enum PayoutRequestStatus {
+  pending
+  approved
+  paid
+  rejected
+}
+
 model User {
   id                  String    @id @default(cuid())
   name                String
@@ -198,6 +243,18 @@ model Customer {
   totalSpent  Decimal  @default(0) @db.Decimal(12, 2)
   ordersCount Int      @default(0)
   active      Boolean  @default(true)
+  deletedAt           DateTime?
+  suspendedAt         DateTime?
+  bannedAt            DateTime?
+  loginBlockedUntil   DateTime?
+  suspendReason       String?
+  banReason           String?
+  country             String?
+  lastLoginDevice     String?
+  referralSource      String?
+  riskScore           Int       @default(0)
+  fraudScore          Int       @default(0)
+  failedLoginAttempts Int       @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -220,6 +277,9 @@ model Customer {
   analyticsEvents     AnalyticsEvent[]
   pushSubscriptions   PushSubscription[]
   whatsappMessages    WhatsAppMessage[]
+  notes            CustomerNote[]
+  fraudFlags       FraudFlag[]
+  customOrders     CustomOrder[]
 
   @@map("customers")
 }
@@ -297,6 +357,8 @@ model Product {
   minStock       Int      @default(5)
   active         Boolean  @default(true)
   featured       Boolean  @default(false)
+  visibility     ProductVisibility @default(visible)
+  deletedAt      DateTime?
   isNew          Boolean  @default(false)
   isBestseller   Boolean  @default(false)
   weight         Decimal? @db.Decimal(8, 3)
@@ -758,6 +820,12 @@ model Affiliate {
   totalPaid      Decimal         @default(0) @db.Decimal(12, 2)
   paymentDetails Json?
   notes          String?
+  balance           Decimal  @default(0) @db.Decimal(12, 2)
+  pendingBalance    Decimal  @default(0) @db.Decimal(12, 2)
+  qrCode            String?
+  landingPageUrl    String?
+  suspendedAt       DateTime?
+  suspendReason     String?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
@@ -765,6 +833,8 @@ model Affiliate {
   referrals   AffiliateReferral[]
   commissions AffiliateCommission[]
   clicks      AffiliateClick[]
+  links             AffiliateLink[]
+  payoutRequests    AffiliatePayoutRequest[]
 
   @@map("affiliates")
 }
@@ -1034,3 +1104,128 @@ model RolePermission {
   @@map("role_permissions")
 }
 
+// ─── Custom Orders ────────────────────────────────────────────────────────────
+
+model CustomOrder {
+  id              String            @id @default(cuid())
+  customerId      String
+  reference       String            @unique
+  productName     String
+  categoryId      String?
+  origin          CustomOrderOrigin @default(other)
+  productLink     String?
+  quantity        Int               @default(1)
+  color           String?
+  model           String?
+  size            String?
+  notes           String?           @db.Text
+  images          String[]
+  files           String[]
+  budget          Decimal?          @db.Decimal(12, 2)
+  status          CustomOrderStatus @default(received)
+  adminNotes      String?           @db.Text
+  quotedPrice     Decimal?          @db.Decimal(12, 2)
+  quotedDeadline  String?
+  quotedShipping  Decimal?          @db.Decimal(12, 2)
+  quotedConditions String?          @db.Text
+  supplierId      String?
+  convertedProductId String?
+  orderId         String?
+  deletedAt       DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  customer  Customer               @relation(fields: [customerId], references: [id])
+  messages  CustomOrderMessage[]
+
+  @@index([customerId])
+  @@index([status])
+  @@map("custom_orders")
+}
+
+model CustomOrderMessage {
+  id            String      @id @default(cuid())
+  customOrderId String
+  author        String      // 'customer' | 'admin'
+  authorName    String?
+  text          String      @db.Text
+  attachments   String[]
+  createdAt     DateTime    @default(now())
+
+  customOrder CustomOrder @relation(fields: [customOrderId], references: [id], onDelete: Cascade)
+
+  @@index([customOrderId])
+  @@map("custom_order_messages")
+}
+
+// ─── Customer CRM ─────────────────────────────────────────────────────────────
+
+model CustomerNote {
+  id         String   @id @default(cuid())
+  customerId String
+  authorId   String?
+  authorName String?
+  content    String   @db.Text
+  createdAt  DateTime @default(now())
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@map("customer_notes")
+}
+
+model FraudFlag {
+  id         String         @id @default(cuid())
+  customerId String
+  reason     String
+  riskLevel  FraudRiskLevel @default(medium)
+  details    Json?
+  resolved   Boolean        @default(false)
+  resolvedAt DateTime?
+  createdAt  DateTime       @default(now())
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@map("fraud_flags")
+}
+
+// ─── Affiliate Pro ────────────────────────────────────────────────────────────
+
+model AffiliateLink {
+  id          String   @id @default(cuid())
+  affiliateId String
+  name        String
+  targetType  String   // 'homepage' | 'product' | 'category' | 'campaign' | 'landing'
+  targetId    String?
+  url         String
+  clicks      Int      @default(0)
+  conversions Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  affiliate Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+
+  @@index([affiliateId])
+  @@map("affiliate_links")
+}
+
+model AffiliatePayoutRequest {
+  id          String             @id @default(cuid())
+  affiliateId String
+  amount      Decimal            @db.Decimal(12, 2)
+  method      String             // 'bank_transfer' | 'multicaixa'
+  details     Json?
+  status      PayoutRequestStatus @default(pending)
+  processedAt DateTime?
+  processedBy String?
+  notes       String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  affiliate Affiliate @relation(fields: [affiliateId], references: [id])
+
+  @@index([affiliateId])
+  @@map("affiliate_payout_requests")
+}

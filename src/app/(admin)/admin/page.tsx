@@ -5,7 +5,10 @@ import { StatsCard } from '@/components/admin/StatsCard'
 import { prisma } from '@/lib/prisma'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { OrderStatusBadge, PaymentStatusBadge } from '@/components/admin/OrderStatusBadge'
-import { ShoppingBag, Users, TrendingUp, AlertTriangle, DollarSign, Package } from 'lucide-react'
+import {
+  ShoppingBag, Users, TrendingUp, AlertTriangle, DollarSign, Package,
+  ClipboardList, UserX, UserCheck, Share2, Wallet, Bell,
+} from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { OrderStatus, PaymentStatus } from '@/types'
 
@@ -17,7 +20,12 @@ async function getDashboardData() {
   const [
     totalOrders, monthOrders, lastMonthOrders,
     totalRevenue, monthRevenue, lastMonthRevenue,
-    totalCustomers, recentOrders, lowStockProducts,
+    totalCustomers, suspendedCustomers, bannedCustomers,
+    recentOrders, lowStockProducts,
+    // Sprint 6 KPIs
+    customOrdersTotal, customOrdersPending, customOrdersInProgress,
+    affiliatesTotal, affiliatesPendingPayout,
+    unreadNotifications,
   ] = await Promise.all([
     prisma.order.count({ where: { status: { not: 'cancelled' } } }),
     prisma.order.count({ where: { createdAt: { gte: startOfMonth }, status: { not: 'cancelled' } } }),
@@ -25,7 +33,9 @@ async function getDashboardData() {
     prisma.order.aggregate({ _sum: { total: true }, where: { status: { not: 'cancelled' } } }),
     prisma.order.aggregate({ _sum: { total: true }, where: { createdAt: { gte: startOfMonth }, status: { not: 'cancelled' } } }),
     prisma.order.aggregate({ _sum: { total: true }, where: { createdAt: { gte: startOfLastMonth, lt: startOfMonth }, status: { not: 'cancelled' } } }),
-    prisma.customer.count({ where: { active: true } }),
+    prisma.customer.count({ where: { active: true, bannedAt: null, suspendedAt: null, deletedAt: null } }),
+    prisma.customer.count({ where: { suspendedAt: { not: null }, bannedAt: null, deletedAt: null } }),
+    prisma.customer.count({ where: { bannedAt: { not: null }, deletedAt: null } }),
     prisma.order.findMany({
       orderBy: { createdAt: 'desc' },
       take: 10,
@@ -36,6 +46,15 @@ async function getDashboardData() {
       select: { id: true, name: true, stock: true, minStock: true },
       take: 5,
     }),
+    // Custom orders
+    prisma.customOrder.count({ where: { deletedAt: null } }),
+    prisma.customOrder.count({ where: { status: 'pending', deletedAt: null } }),
+    prisma.customOrder.count({ where: { status: { in: ['quoted', 'accepted', 'in_production'] }, deletedAt: null } }),
+    // Affiliates
+    prisma.affiliate.count({ where: { active: true } }),
+    prisma.affiliatePayoutRequest.count({ where: { status: 'pending' } }),
+    // Notifications
+    prisma.notification.count({ where: { read: false, customerId: null } }),
   ])
 
   const monthOrdersChange = lastMonthOrders > 0
@@ -54,8 +73,16 @@ async function getDashboardData() {
     monthRevenue: currRev,
     monthRevenueChange,
     totalCustomers,
+    suspendedCustomers,
+    bannedCustomers,
     recentOrders,
     lowStockProducts,
+    customOrdersTotal,
+    customOrdersPending,
+    customOrdersInProgress,
+    affiliatesTotal,
+    affiliatesPendingPayout,
+    unreadNotifications,
   }
 }
 
@@ -64,12 +91,69 @@ async function DashboardContent() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Stats */}
+      {/* Row 1 — Core KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatsCard title="Receita Total" value={data.totalRevenue} currency icon={DollarSign} />
         <StatsCard title="Receita do Mês" value={data.monthRevenue} currency icon={TrendingUp} change={data.monthRevenueChange} />
         <StatsCard title="Pedidos do Mês" value={data.monthOrders} icon={ShoppingBag} change={data.monthOrdersChange} />
-        <StatsCard title="Total de Clientes" value={data.totalCustomers} icon={Users} />
+        <StatsCard title="Clientes Ativos" value={data.totalCustomers} icon={Users} />
+      </div>
+
+      {/* Row 2 — Sprint 6 KPIs */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="bg-white rounded-xl border border-gray-100 p-5 flex items-start gap-4">
+          <div className="p-2.5 rounded-lg bg-purple-50">
+            <ClipboardList className="w-5 h-5 text-purple-600" />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 font-medium">Encomendas Custom</p>
+            <p className="text-2xl font-bold text-gray-900 mt-0.5">{data.customOrdersTotal}</p>
+            <div className="flex gap-3 mt-1.5 text-xs">
+              <span className="text-amber-600 font-medium">{data.customOrdersPending} pendentes</span>
+              <span className="text-blue-600 font-medium">{data.customOrdersInProgress} em curso</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-100 p-5 flex items-start gap-4">
+          <div className="p-2.5 rounded-lg bg-red-50">
+            <UserX className="w-5 h-5 text-red-500" />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 font-medium">CRM — Clientes</p>
+            <p className="text-2xl font-bold text-gray-900 mt-0.5">{data.suspendedCustomers + data.bannedCustomers}</p>
+            <div className="flex gap-3 mt-1.5 text-xs">
+              <span className="text-orange-600 font-medium">{data.suspendedCustomers} suspensos</span>
+              <span className="text-red-600 font-medium">{data.bannedCustomers} banidos</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-100 p-5 flex items-start gap-4">
+          <div className="p-2.5 rounded-lg bg-green-50">
+            <Share2 className="w-5 h-5 text-green-600" />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 font-medium">Afiliados Ativos</p>
+            <p className="text-2xl font-bold text-gray-900 mt-0.5">{data.affiliatesTotal}</p>
+            {data.affiliatesPendingPayout > 0 && (
+              <p className="mt-1.5 text-xs text-amber-600 font-medium">
+                {data.affiliatesPendingPayout} pagamento{data.affiliatesPendingPayout !== 1 ? 's' : ''} pendente{data.affiliatesPendingPayout !== 1 ? 's' : ''}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-100 p-5 flex items-start gap-4">
+          <div className="p-2.5 rounded-lg bg-blue-50">
+            <Bell className="w-5 h-5 text-blue-600" />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 font-medium">Notificações</p>
+            <p className="text-2xl font-bold text-gray-900 mt-0.5">{data.unreadNotifications}</p>
+            <p className="mt-1.5 text-xs text-gray-500">não lidas</p>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">

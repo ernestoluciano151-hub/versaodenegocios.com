@@ -1,41 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdminUser } from '@/lib/admin-auth'
+import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
-
-// In-memory store until DB migration adds CustomOrder model
-let ORDERS: Record<string, unknown>[] = [
-  {
-    id: 'co_demo1',
-    reference: 'EP-2026-0001',
-    status: 'pending',
-    customerName: 'Maria Silva',
-    customerEmail: 'maria@exemplo.com',
-    customerPhone: '+244 923 456 789',
-    description: 'Necessito de 50 camisas personalizadas com o logótipo da empresa, tamanhos M e L.',
-    budget: 250000,
-    attachments: [],
-    messages: [
-      { id: 'm1', author: 'customer', text: 'Bom dia, tenho urgência nesta encomenda.', createdAt: new Date(Date.now() - 3600000).toISOString() },
-    ],
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-    updatedAt: new Date(Date.now() - 3600000).toISOString(),
-  },
-  {
-    id: 'co_demo2',
-    reference: 'EP-2026-0002',
-    status: 'in_progress',
-    customerName: 'João Baptista',
-    customerEmail: 'joao@empresa.ao',
-    customerPhone: '+244 912 345 678',
-    description: 'Canecas personalizadas para evento corporativo — 100 unidades com arte fornecida.',
-    budget: 150000,
-    attachments: [],
-    messages: [],
-    createdAt: new Date(Date.now() - 172800000).toISOString(),
-    updatedAt: new Date(Date.now() - 7200000).toISOString(),
-  },
-]
 
 export async function GET(req: NextRequest) {
   try {
@@ -46,31 +13,63 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url)
   const status = searchParams.get('status')
-  const search = searchParams.get('q')
+  const q = searchParams.get('q')
+  const page = Math.max(1, parseInt(searchParams.get('page') ?? '1'))
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') ?? '20')))
+  const skip = (page - 1) * limit
 
-  let orders = [...ORDERS]
+  const where: Record<string, unknown> = { deletedAt: null }
 
   if (status && status !== 'all') {
-    orders = orders.filter((o) => o.status === status)
+    where.status = status
   }
-  if (search) {
-    const q = search.toLowerCase()
-    orders = orders.filter(
-      (o) =>
-        String(o.customerName).toLowerCase().includes(q) ||
-        String(o.description).toLowerCase().includes(q) ||
-        String(o.reference).toLowerCase().includes(q)
-    )
+
+  if (q) {
+    where.OR = [
+      { reference: { contains: q, mode: 'insensitive' } },
+      { productName: { contains: q, mode: 'insensitive' } },
+      { customer: { name: { contains: q, mode: 'insensitive' } } },
+      { customer: { email: { contains: q, mode: 'insensitive' } } },
+    ]
+  }
+
+  const [orders, total, allOrders] = await Promise.all([
+    prisma.customOrder.findMany({
+      include: {
+        customer: { select: { name: true, email: true, phone: true } },
+        messages: { orderBy: { createdAt: 'desc' }, take: 1 },
+      },
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+    }),
+    prisma.customOrder.count({ where }),
+    prisma.customOrder.groupBy({
+      by: ['status'],
+      where: { deletedAt: null },
+      _count: { _all: true },
+    }),
+  ])
+
+  const statusMap: Record<string, number> = {}
+  for (const row of allOrders) {
+    statusMap[row.status] = row._count._all
   }
 
   const stats = {
-    total: ORDERS.length,
-    pending: ORDERS.filter((o) => o.status === 'pending').length,
-    in_progress: ORDERS.filter((o) => o.status === 'in_progress').length,
-    delivered: ORDERS.filter((o) => o.status === 'delivered').length,
+    received: statusMap['received'] ?? 0,
+    analyzing: statusMap['analyzing'] ?? 0,
+    negotiating: statusMap['negotiating'] ?? 0,
+    approved: statusMap['approved'] ?? 0,
+    rejected: statusMap['rejected'] ?? 0,
+    purchasing: statusMap['purchasing'] ?? 0,
+    in_transit: statusMap['in_transit'] ?? 0,
+    delivered: statusMap['delivered'] ?? 0,
+    cancelled: statusMap['cancelled'] ?? 0,
   }
 
-  return NextResponse.json({ orders, stats })
+  return NextResponse.json({ orders, total, stats })
 }
 
 export async function POST(req: NextRequest) {
@@ -81,20 +80,48 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json()
-  const order = {
-    id: `co_${Date.now()}`,
-    reference: `EP-${new Date().getFullYear()}-${String(ORDERS.length + 1).padStart(4, '0')}`,
-    status: 'pending',
-    customerName: body.customerName,
-    customerEmail: body.customerEmail,
-    customerPhone: body.customerPhone,
-    description: body.description,
-    budget: body.budget ?? null,
-    attachments: body.attachments ?? [],
-    messages: [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+  const {
+    customerId,
+    productName,
+    categoryId,
+    origin,
+    productLink,
+    quantity,
+    color,
+    model,
+    size,
+    notes,
+    budget,
+  } = body
+
+  if (!customerId || !productName || !origin || !quantity) {
+    return NextResponse.json(
+      { error: 'customerId, productName, origin e quantity são obrigatórios.' },
+      { status: 400 }
+    )
   }
-  ORDERS.unshift(order)
+
+  const year = new Date().getFullYear()
+  const count = await prisma.customOrder.count()
+  const reference = `EP-${year}-${String(count + 1).padStart(4, '0')}`
+
+  const order = await prisma.customOrder.create({
+    data: {
+      customerId,
+      productName,
+      categoryId: categoryId ?? null,
+      origin,
+      productLink: productLink ?? null,
+      quantity: parseInt(quantity),
+      color: color ?? null,
+      model: model ?? null,
+      size: size ?? null,
+      notes: notes ?? null,
+      budget: budget ? parseFloat(budget) : null,
+      reference,
+      status: 'received',
+    },
+  })
+
   return NextResponse.json(order, { status: 201 })
 }

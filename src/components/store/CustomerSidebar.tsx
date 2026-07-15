@@ -4,9 +4,10 @@ import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import {
   LayoutDashboard, ShoppingBag, Heart, MapPin, CreditCard,
-  User, Bell, HelpCircle, LogOut, ChevronRight, Star, Users, ClipboardList,
+  User, Bell, HelpCircle, LogOut, ChevronRight, Star, Users, ClipboardList, Menu,
 } from 'lucide-react'
 import { getInitials } from '@/lib/utils'
+import { useUIStore } from '@/store/ui'
 
 const navItems = [
   { href: '/conta', label: 'Painel', icon: LayoutDashboard, exact: true },
@@ -28,13 +29,27 @@ interface Props {
 
 export function CustomerSidebar({ customer }: Props) {
   const pathname = usePathname()
+  const { openMobileMenu } = useUIStore()
 
   function isActive(href: string, exact?: boolean) {
     return exact ? pathname === href : pathname.startsWith(href)
   }
 
   return (
-    <aside className="w-full lg:w-64 flex-shrink-0">
+    <div className="w-full lg:w-64 flex-shrink-0">
+      {/* Mobile header */}
+      <div className="flex lg:hidden items-center justify-between mb-4">
+        <h2 className="font-bold text-gray-900">Minha Conta</h2>
+        <button
+          onClick={openMobileMenu}
+          className="flex items-center gap-2 px-3 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium"
+        >
+          <Menu className="w-4 h-4" />
+          Menu
+        </button>
+      </div>
+
+    <aside className="w-full lg:w-64 flex-shrink-0 hidden lg:block">
       {/* Profile card */}
       <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-4">
         <div className="flex items-center gap-3">
@@ -86,5 +101,6 @@ export function CustomerSidebar({ customer }: Props) {
         </ul>
       </nav>
     </aside>
+    </div>
   )
 }

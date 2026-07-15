@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdminUser } from '@/lib/admin-auth'
+import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
-// Shared in-memory store (same module scope as parent route in production replace with DB)
-// For now returns success stub
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -18,13 +17,37 @@ export async function POST(
   const { id } = await params
   const body = await req.json()
 
-  const message = {
-    id: `msg_${Date.now()}`,
-    orderId: id,
-    author: 'admin',
-    text: body.text,
-    createdAt: new Date().toISOString(),
+  if (!body.text?.trim()) {
+    return NextResponse.json({ error: 'Mensagem vazia.' }, { status: 400 })
   }
+
+  const order = await prisma.customOrder.findUnique({
+    where: { id },
+    select: { id: true, customerId: true, reference: true },
+  })
+
+  if (!order) {
+    return NextResponse.json({ error: 'Encomenda não encontrada.' }, { status: 404 })
+  }
+
+  const message = await prisma.customOrderMessage.create({
+    data: {
+      orderId: id,
+      author: 'admin',
+      text: body.text,
+      attachments: body.attachments ?? [],
+    },
+  })
+
+  await prisma.notification.create({
+    data: {
+      customerId: order.customerId,
+      type: 'custom_order_message',
+      title: 'Nova resposta à sua encomenda',
+      message: `A sua encomenda ${order.reference} tem uma nova resposta.`,
+      data: { orderId: id },
+    },
+  })
 
   return NextResponse.json(message, { status: 201 })
 }

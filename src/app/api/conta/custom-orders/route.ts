@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireCustomerSession } from "@/lib/customer-auth"
+import { requireCustomerSession } from '@/lib/customer-auth'
+import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
-// In-memory store shared with admin route (in production: DB)
-let CUSTOMER_ORDERS: Record<string, unknown>[] = []
-
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   let customer: { id: string; name: string; email: string; image?: string | null; type: string }
   try {
     customer = await requireCustomerSession()
@@ -14,7 +12,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const orders = CUSTOMER_ORDERS.filter((o) => o.customerId === customer.id)
+  const orders = await prisma.customOrder.findMany({
+    where: { customerId: customer.id, deletedAt: null },
+    include: {
+      messages: { orderBy: { createdAt: 'desc' }, take: 1 },
+    },
+    orderBy: { createdAt: 'desc' },
+  })
+
   return NextResponse.json(orders)
 }
 
@@ -27,29 +32,62 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json()
+  const {
+    productName,
+    origin,
+    productLink,
+    quantity,
+    color,
+    model,
+    size,
+    notes,
+    budget,
+    categoryId,
+  } = body
 
-  if (!body.description || String(body.description).trim().length < 20) {
-    return NextResponse.json(
-      { error: 'Descrição deve ter pelo menos 20 caracteres.' },
-      { status: 400 }
-    )
+  if (!productName || String(productName).trim().length === 0) {
+    return NextResponse.json({ error: 'O nome do produto é obrigatório.' }, { status: 400 })
   }
 
-  const order = {
-    id: `co_${Date.now()}`,
-    reference: `EP-${new Date().getFullYear()}-${String(CUSTOMER_ORDERS.length + 1).padStart(4, '0')}`,
-    customerId: customer.id,
-    customerName: customer.name,
-    customerEmail: customer.email,
-    status: 'pending',
-    description: body.description,
-    budget: body.budget ?? null,
-    attachments: [],
-    messages: [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+  if (!quantity || parseInt(quantity) < 1) {
+    return NextResponse.json({ error: 'A quantidade deve ser pelo menos 1.' }, { status: 400 })
   }
 
-  CUSTOMER_ORDERS.unshift(order)
+  if (!origin || String(origin).trim().length === 0) {
+    return NextResponse.json({ error: 'A origem do produto é obrigatória.' }, { status: 400 })
+  }
+
+  const year = new Date().getFullYear()
+  const count = await prisma.customOrder.count()
+  const reference = `EP-${year}-${String(count + 1).padStart(4, '0')}`
+
+  const order = await prisma.customOrder.create({
+    data: {
+      customerId: customer.id,
+      productName: String(productName).trim(),
+      origin: String(origin).trim(),
+      productLink: productLink ?? null,
+      quantity: parseInt(quantity),
+      color: color ?? null,
+      model: model ?? null,
+      size: size ?? null,
+      notes: notes ?? null,
+      budget: budget ? parseFloat(budget) : null,
+      categoryId: categoryId ?? null,
+      reference,
+      status: 'received',
+    },
+  })
+
+  // Notificação para o admin
+  await prisma.notification.create({
+    data: {
+      type: 'new_custom_order',
+      title: 'Nova Encomenda Personalizada',
+      message: `O cliente ${customer.name} (${customer.email}) submeteu uma nova encomenda personalizada: ${order.productName} (${reference}).`,
+      data: { orderId: order.id, customerId: customer.id },
+    },
+  })
+
   return NextResponse.json(order, { status: 201 })
 }

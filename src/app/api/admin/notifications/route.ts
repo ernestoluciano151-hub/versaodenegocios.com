@@ -1,57 +1,49 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdminUser } from '@/lib/admin-auth'
 
-export async function GET(req: Request) {
-  try {
-    await requireAdminUser()
-  } catch {
-    return NextResponse.json([], { status: 200 })
-  }
-  try {
-    // Agregar notificações reais do sistema
-    const [pendingOrders, lowStockProducts, pendingTickets] = await Promise.all([
-      prisma.order.count({ where: { status: 'awaiting_confirmation' } }),
-      prisma.product.count({ where: { stock: { lte: 5 }, active: true } }),
-      prisma.supportTicket.count({ where: { status: 'open' } }),
-    ])
+export const dynamic = 'force-dynamic'
 
-    const notifications = []
-    const now = new Date().toISOString()
+export async function GET(req: NextRequest) {
+  try { await requireAdminUser() } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
 
-    if (pendingOrders > 0) {
-      notifications.push({
-        id: 'pending-orders',
-        type: 'order',
-        title: `${pendingOrders} pedido${pendingOrders > 1 ? 's' : ''} aguarda${pendingOrders === 1 ? '' : 'm'} confirmação`,
-        message: 'Clique para gerir os pedidos pendentes',
-        read: false,
-        createdAt: now,
-      })
-    }
-    if (lowStockProducts > 0) {
-      notifications.push({
-        id: 'low-stock',
-        type: 'product',
-        title: `${lowStockProducts} produto${lowStockProducts > 1 ? 's' : ''} com stock baixo`,
-        message: 'Repor stock antes de ficarem esgotados',
-        read: false,
-        createdAt: now,
-      })
-    }
-    if (pendingTickets > 0) {
-      notifications.push({
-        id: 'open-tickets',
-        type: 'system',
-        title: `${pendingTickets} ticket${pendingTickets > 1 ? 's' : ''} de suporte em aberto`,
-        message: 'Responder aos clientes em espera',
-        read: false,
-        createdAt: now,
-      })
-    }
+  const { searchParams } = new URL(req.url)
+  const read = searchParams.get('read')
+  const type = searchParams.get('type')
+  const page = parseInt(searchParams.get('page') || '1')
+  const limit = parseInt(searchParams.get('limit') || '20')
 
-    return NextResponse.json(notifications)
-  } catch {
-    return NextResponse.json([])
-  }
+  const where: Record<string, unknown> = {}
+  if (read === 'true') where.read = true
+  if (read === 'false') where.read = false
+  if (type) where.type = type
+
+  const [notifications, total, unreadCount] = await Promise.all([
+    prisma.notification.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.notification.count({ where }),
+    prisma.notification.count({ where: { read: false } }),
+  ])
+
+  return NextResponse.json({ notifications, total, unreadCount, page, limit })
+}
+
+export async function POST(req: NextRequest) {
+  try { await requireAdminUser() } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
+
+  const body = await req.json()
+  const notification = await prisma.notification.create({
+    data: {
+      type: body.type,
+      title: body.title,
+      message: body.message,
+      userId: body.userId ?? null,
+      data: body.data ?? null,
+    },
+  })
+  return NextResponse.json(notification, { status: 201 })
 }

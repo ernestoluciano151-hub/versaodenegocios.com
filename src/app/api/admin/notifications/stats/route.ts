@@ -4,13 +4,16 @@ import { requireAdminUser } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
-export async function PATCH() {
+export async function GET() {
   try { await requireAdminUser() } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
 
-  const result = await prisma.notification.updateMany({
+  const stats = await prisma.notification.groupBy({
+    by: ['type'],
     where: { read: false, customerId: null },
-    data: { read: true },
+    _count: { id: true },
   })
 
-  return NextResponse.json({ ok: true, updated: result.count })
+  const total = stats.reduce((sum, s) => sum + s._count.id, 0)
+
+  return NextResponse.json({ total, byType: stats })
 }

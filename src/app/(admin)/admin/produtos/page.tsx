@@ -8,7 +8,7 @@ import { formatCurrency, formatDate } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Plus, Search, Edit, Package } from 'lucide-react'
-import { VisibilityToggle } from './VisibilityToggle'
+import { VisibilitySelect } from './VisibilitySelect'
 
 async function getProducts(search?: string) {
   return prisma.product.findMany({
@@ -38,7 +38,7 @@ async function ProductsTable({ search }: { search?: string }) {
             <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Categoria</th>
             <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Preço</th>
             <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Stock</th>
-            <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Visível</th>
+            <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Visibilidade</th>
             <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Actualizado</th>
             <th className="py-3 px-4" />
           </tr>
@@ -84,10 +84,7 @@ async function ProductsTable({ search }: { search?: string }) {
               </td>
               <td className="py-3 px-4">
                 <div className="flex items-center gap-2">
-                  <VisibilityToggle productId={p.id} initialActive={p.active} />
-                  <span className={`text-xs font-medium ${p.active ? 'text-green-600' : 'text-gray-400'}`}>
-                    {p.active ? 'Visível' : 'Oculto'}
-                  </span>
+                  <VisibilitySelect productId={p.id} initialVisibility={(p.visibility as 'visible' | 'hidden' | 'maintenance' | 'out_of_stock' | 'catalog_only' | 'members_only' | 'affiliates_only' | 'archived') || 'visible'} />
                   {p.featured && <Badge variant="default" className="text-xs ml-1">Destaque</Badge>}
                 </div>
               </td>
