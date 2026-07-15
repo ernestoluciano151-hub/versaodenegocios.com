@@ -48,11 +48,11 @@ async function getDashboardData() {
     }),
     // Custom orders
     prisma.customOrder.count({ where: { deletedAt: null } }),
-    prisma.customOrder.count({ where: { status: 'pending', deletedAt: null } }),
-    prisma.customOrder.count({ where: { status: { in: ['quoted', 'accepted', 'in_production'] }, deletedAt: null } }),
+    prisma.customOrder.count({ where: { status: 'pending' as const, deletedAt: null } }),
+    prisma.customOrder.count({ where: { status: { in: ['quoted', 'accepted', 'in_production'] as const }, deletedAt: null } }),
     // Affiliates
     prisma.affiliate.count({ where: { active: true } }),
-    prisma.affiliatePayoutRequest.count({ where: { status: 'pending' } }),
+    prisma.affiliatePayoutRequest.count({ where: { status: 'pending' as const } }),
     // Notifications
     prisma.notification.count({ where: { read: false, customerId: null } }),
   ])
