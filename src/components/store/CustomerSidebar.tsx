@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import {
   LayoutDashboard, ShoppingBag, Heart, MapPin, CreditCard,
-  User, Bell, HelpCircle, LogOut, ChevronRight, Star, Users,
+  User, Bell, HelpCircle, LogOut, ChevronRight, Star, Users, ClipboardList,
 } from 'lucide-react'
 import { getInitials } from '@/lib/utils'
 
@@ -17,6 +17,7 @@ const navItems = [
   { href: '/conta/perfil', label: 'Perfil', icon: User },
   { href: '/conta/fidelizacao', label: 'Pontos & Níveis', icon: Star },
   { href: '/conta/afiliado', label: 'Programa Afiliado', icon: Users },
+  { href: '/conta/encomendas-personalizadas', label: 'Encomendas Custom', icon: ClipboardList },
   { href: '/conta/notificacoes', label: 'Notificações', icon: Bell },
   { href: '/conta/suporte', label: 'Suporte', icon: HelpCircle },
 ]

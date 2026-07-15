@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Package, Tag, Users, ShoppingBag, CreditCard,
   Warehouse, Plane, Building2, TrendingUp, Megaphone, FileBarChart,
   Settings, Zap, ChevronLeft, ChevronRight, LifeBuoy, Mail,
-  MessageSquare, Star, UserCheck, BarChart3,
+  MessageSquare, Star, UserCheck, BarChart3, ClipboardList,
 } from 'lucide-react'
 import { useUIStore } from '@/store/ui'
 import { cn } from '@/lib/utils'
@@ -18,6 +18,7 @@ const navItems = [
   { href: '/admin/clientes', label: 'Clientes', icon: Users },
   { href: '/admin/pedidos', label: 'Pedidos', icon: ShoppingBag },
   { href: '/admin/pagamentos', label: 'Pagamentos', icon: CreditCard },
+  { href: '/admin/encomendas-personalizadas', label: 'Enc. Custom', icon: ClipboardList },
   { href: '/admin/stock', label: 'Stock', icon: Warehouse },
   { href: '/admin/importacoes', label: 'Importações', icon: Plane },
   { href: '/admin/fornecedores', label: 'Fornecedores', icon: Building2 },

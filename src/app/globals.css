@@ -125,3 +125,4 @@ img[width][height] {
   nav, footer, [data-no-print] { display: none !important; }
   body { font-size: 12pt; }
 }
+.animate-slide-in { animation: slide-in-left 280ms ease forwards; }

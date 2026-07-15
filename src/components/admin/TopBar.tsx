@@ -2,9 +2,10 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { Bell, ExternalLink, Menu } from 'lucide-react'
+import { ExternalLink, Menu } from 'lucide-react'
 import { useUIStore } from '@/store/ui'
 import { getInitials } from '@/lib/utils'
+import { NotificationPanel } from './NotificationPanel'
 
 interface TopBarProps {
   title: string
@@ -14,15 +15,24 @@ interface TopBarProps {
 }
 
 export function TopBar({ title, userName = 'Admin', userEmail, actions }: TopBarProps) {
-  const { toggleSidebar } = useUIStore()
+  const { toggleSidebar, openMobileMenu } = useUIStore()
 
   return (
     <header className="h-16 border-b border-gray-200 bg-white flex items-center justify-between px-4 gap-4">
       <div className="flex items-center gap-3">
+        {/* Desktop: colapsa sidebar */}
         <button
           onClick={toggleSidebar}
-          className="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
+          className="hidden md:flex p-2 rounded-lg hover:bg-gray-100 text-gray-500"
           aria-label="Toggle menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+        {/* Mobile: abre drawer */}
+        <button
+          onClick={openMobileMenu}
+          className="flex md:hidden p-2 rounded-lg hover:bg-gray-100 text-gray-500"
+          aria-label="Abrir menu"
         >
           <Menu className="w-5 h-5" />
         </button>
@@ -40,10 +50,7 @@ export function TopBar({ title, userName = 'Admin', userEmail, actions }: TopBar
           Ver Loja
         </Link>
 
-        <button className="relative p-2 rounded-lg hover:bg-gray-100 text-gray-500">
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-orange-500 rounded-full" />
-        </button>
+        <NotificationPanel />
 
         <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
           <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white text-xs font-bold">

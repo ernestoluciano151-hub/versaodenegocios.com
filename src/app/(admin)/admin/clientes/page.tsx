@@ -4,9 +4,9 @@ import Link from 'next/link'
 import { TopBar } from '@/components/admin/TopBar'
 import { prisma } from '@/lib/prisma'
 import { formatCurrency, formatDate, getInitials } from '@/lib/utils'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Search, Eye } from 'lucide-react'
+import { Search, Eye, Users, TrendingUp, ShoppingBag, UserCheck } from 'lucide-react'
+import { CustomerStatusToggle } from './CustomerStatusToggle'
 
 async function getCustomers(search?: string) {
   return prisma.customer.findMany({
@@ -20,6 +20,66 @@ async function getCustomers(search?: string) {
     orderBy: { totalSpent: 'desc' },
     take: 100,
   })
+}
+
+async function getStats() {
+  const [total, active, topSpender] = await Promise.all([
+    prisma.customer.count(),
+    prisma.customer.count({ where: { active: true } }),
+    prisma.customer.findFirst({ orderBy: { totalSpent: 'desc' }, select: { totalSpent: true } }),
+  ])
+  const totalSpent = await prisma.customer.aggregate({ _sum: { totalSpent: true } })
+  return {
+    total,
+    active,
+    inactive: total - active,
+    totalRevenue: Number(totalSpent._sum.totalSpent ?? 0),
+    topSpend: Number(topSpender?.totalSpent ?? 0),
+  }
+}
+
+async function StatsBar() {
+  const stats = await getStats()
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3">
+        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+          <Users className="w-5 h-5 text-blue-600" />
+        </div>
+        <div>
+          <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+          <p className="text-xs text-gray-500">Total de Clientes</p>
+        </div>
+      </div>
+      <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3">
+        <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+          <UserCheck className="w-5 h-5 text-green-600" />
+        </div>
+        <div>
+          <p className="text-2xl font-bold text-gray-900">{stats.active}</p>
+          <p className="text-xs text-gray-500">Clientes Activos</p>
+        </div>
+      </div>
+      <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3">
+        <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+          <TrendingUp className="w-5 h-5 text-orange-600" />
+        </div>
+        <div>
+          <p className="text-lg font-bold text-gray-900">{formatCurrency(stats.totalRevenue)}</p>
+          <p className="text-xs text-gray-500">Receita Total</p>
+        </div>
+      </div>
+      <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3">
+        <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+          <ShoppingBag className="w-5 h-5 text-purple-600" />
+        </div>
+        <div>
+          <p className="text-lg font-bold text-gray-900">{formatCurrency(stats.topSpend)}</p>
+          <p className="text-xs text-gray-500">Maior Comprador</p>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 async function CustomersTable({ search }: { search?: string }) {
@@ -54,12 +114,15 @@ async function CustomersTable({ search }: { search?: string }) {
                 </div>
               </td>
               <td className="py-3 px-4 text-gray-600">{c.phone ?? '—'}</td>
-              <td className="py-3 px-4 font-medium text-gray-900">{c.ordersCount}</td>
+              <td className="py-3 px-4">
+                <div className="flex items-center gap-1">
+                  <span className="font-medium text-gray-900">{c.ordersCount}</span>
+                  {c.ordersCount >= 10 && <span className="text-xs text-orange-500 font-semibold">★ VIP</span>}
+                </div>
+              </td>
               <td className="py-3 px-4 font-bold text-gray-900">{formatCurrency(Number(c.totalSpent))}</td>
               <td className="py-3 px-4">
-                <Badge variant={c.active ? 'success' : 'destructive'}>
-                  {c.active ? 'Activo' : 'Bloqueado'}
-                </Badge>
+                <CustomerStatusToggle customerId={c.id} initialActive={c.active} />
               </td>
               <td className="py-3 px-4 text-xs text-gray-400">{formatDate(c.createdAt)}</td>
               <td className="py-3 px-4">
@@ -72,7 +135,10 @@ async function CustomersTable({ search }: { search?: string }) {
         </tbody>
       </table>
       {customers.length === 0 && (
-        <div className="text-center py-12 text-gray-500">Nenhum cliente encontrado.</div>
+        <div className="text-center py-12 text-gray-500">
+          <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+          <p>Nenhum cliente encontrado.</p>
+        </div>
       )}
     </div>
   )
@@ -83,8 +149,11 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <TopBar title="Clientes" />
+      <TopBar title="CRM Clientes" />
       <div className="flex-1 overflow-y-auto p-6">
+        <Suspense fallback={null}>
+          <StatsBar />
+        </Suspense>
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <div className="p-4 border-b border-gray-200">
             <form className="flex items-center gap-2">

@@ -8,6 +8,7 @@ import { formatCurrency, formatDate } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Plus, Search, Edit, Package } from 'lucide-react'
+import { VisibilityToggle } from './VisibilityToggle'
 
 async function getProducts(search?: string) {
   return prisma.product.findMany({
@@ -37,7 +38,7 @@ async function ProductsTable({ search }: { search?: string }) {
             <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Categoria</th>
             <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Preço</th>
             <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Stock</th>
-            <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Estado</th>
+            <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Visível</th>
             <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Actualizado</th>
             <th className="py-3 px-4" />
           </tr>
@@ -51,7 +52,7 @@ async function ProductsTable({ search }: { search?: string }) {
                     {p.images[0] ? (
                       <Image src={p.images[0]} alt={p.name} fill className="object-contain p-1" />
                     ) : (
-                      <Package className="w-5 h-5 text-gray-400 m-auto" />
+                      <Package className="w-5 h-5 text-gray-400 m-auto mt-2.5" />
                     )}
                   </div>
                   <div>
@@ -73,16 +74,21 @@ async function ProductsTable({ search }: { search?: string }) {
                 )}
               </td>
               <td className="py-3 px-4">
-                <span className={`font-medium ${p.stock === 0 ? 'text-red-600' : p.stock <= p.minStock ? 'text-orange-500' : 'text-gray-900'}`}>
-                  {p.stock}
-                </span>
+                <div className="flex flex-col gap-0.5">
+                  <span className={`font-medium ${p.stock === 0 ? 'text-red-600' : p.stock <= p.minStock ? 'text-orange-500' : 'text-gray-900'}`}>
+                    {p.stock}
+                  </span>
+                  {p.stock === 0 && <span className="text-xs text-red-500">Esgotado</span>}
+                  {p.stock > 0 && p.stock <= p.minStock && <span className="text-xs text-orange-500">Stock baixo</span>}
+                </div>
               </td>
               <td className="py-3 px-4">
-                <div className="flex flex-col gap-1">
-                  <Badge variant={p.active ? 'success' : 'secondary'}>
-                    {p.active ? 'Activo' : 'Inactivo'}
-                  </Badge>
-                  {p.featured && <Badge variant="default" className="text-xs">Destaque</Badge>}
+                <div className="flex items-center gap-2">
+                  <VisibilityToggle productId={p.id} initialActive={p.active} />
+                  <span className={`text-xs font-medium ${p.active ? 'text-green-600' : 'text-gray-400'}`}>
+                    {p.active ? 'Visível' : 'Oculto'}
+                  </span>
+                  {p.featured && <Badge variant="default" className="text-xs ml-1">Destaque</Badge>}
                 </div>
               </td>
               <td className="py-3 px-4 text-xs text-gray-400">{formatDate(p.updatedAt)}</td>
