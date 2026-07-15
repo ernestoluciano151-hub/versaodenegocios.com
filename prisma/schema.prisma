@@ -9,8 +9,12 @@ datasource db {
 enum UserRole {
   SUPER_ADMIN
   ADMIN
-  MANAGER
+  FINANCIAL_MANAGER
+  SALES_MANAGER
+  MARKETING
   SUPPORT
+  WAREHOUSE
+  OPERATOR
 }
 
 enum OrderStatus {
@@ -44,6 +48,7 @@ enum PaymentMethodType {
 enum PaymentMethodStatus {
   active
   inactive
+  maintenance
   coming_soon
 }
 
@@ -162,15 +167,19 @@ enum NotificationChannel {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  password  String
-  role      UserRole @default(SUPPORT)
-  avatar    String?
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                  String    @id @default(cuid())
+  name                String
+  email               String    @unique
+  password            String
+  role                UserRole  @default(SUPPORT)
+  department          String?
+  avatar              String?
+  active              Boolean   @default(true)
+  mustChangePassword  Boolean   @default(false)
+  lastLoginAt         DateTime?
+  lastLoginIp         String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   notifications Notification[]
   auditLogs     AuditLog[]
@@ -381,6 +390,9 @@ model PaymentMethod {
   name          String
   type          PaymentMethodType   @unique
   status        PaymentMethodStatus @default(active)
+  showInStore   Boolean             @default(true)
+  sortOrder     Int                 @default(0)
+  description   String?
   configuration Json?
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
@@ -865,5 +877,160 @@ model PushSubscription {
   customer Customer? @relation(fields: [customerId], references: [id])
 
   @@map("push_subscriptions")
+}
+
+// ─── Platform Settings ────────────────────────────────────────────────────────
+
+model StoreSettings {
+  id           String   @id @default(cuid())
+  companyName  String   @default("VN Commerce")
+  logo         String?
+  logoDark     String?
+  logoWhite    String?
+  favicon      String?
+  phone        String?
+  whatsapp     String?
+  email        String?
+  website      String?
+  address      String?
+  city         String?
+  province     String?
+  country      String   @default("Angola")
+  nif          String?
+  currency     String   @default("AOA")
+  dateFormat   String   @default("DD/MM/YYYY")
+  timeFormat   String   @default("HH:mm")
+  timezone     String   @default("Africa/Luanda")
+  updatedAt    DateTime @updatedAt
+
+  @@map("store_settings")
+}
+
+model SocialSettings {
+  id        String   @id @default(cuid())
+  facebook  String?
+  instagram String?
+  linkedin  String?
+  tiktok    String?
+  youtube   String?
+  twitter   String?
+  whatsapp  String?
+  telegram  String?
+  updatedAt DateTime @updatedAt
+
+  @@map("social_settings")
+}
+
+model EmailSettings {
+  id              String   @id @default(cuid())
+  provider        String   @default("resend")
+  apiKey          String?
+  fromEmail       String?
+  fromName        String?
+  supportEmail    String?
+  financeEmail    String?
+  salesEmail      String?
+  defaultTemplate String?
+  updatedAt       DateTime @updatedAt
+
+  @@map("email_settings")
+}
+
+model SeoSettings {
+  id                 String   @id @default(cuid())
+  siteTitle          String?
+  siteDescription    String?
+  keywords           String?
+  googleVerification String?
+  facebookMeta       String?
+  twitterMeta        String?
+  robots             String   @default("index, follow")
+  ogImage            String?
+  updatedAt          DateTime @updatedAt
+
+  @@map("seo_settings")
+}
+
+model AnalyticsSettings {
+  id                      String   @id @default(cuid())
+  googleAnalyticsId       String?
+  googleTagManagerId      String?
+  metaPixelId             String?
+  tiktokPixelId           String?
+  linkedinInsightId       String?
+  hotjarId                String?
+  microsoftClarityId      String?
+  googleAnalyticsEnabled  Boolean  @default(false)
+  googleTagManagerEnabled Boolean  @default(false)
+  metaPixelEnabled        Boolean  @default(false)
+  tiktokPixelEnabled      Boolean  @default(false)
+  linkedinInsightEnabled  Boolean  @default(false)
+  hotjarEnabled           Boolean  @default(false)
+  microsoftClarityEnabled Boolean  @default(false)
+  updatedAt               DateTime @updatedAt
+
+  @@map("analytics_settings")
+}
+
+model ThemeSettings {
+  id             String   @id @default(cuid())
+  mode           String   @default("light")
+  primaryColor   String   @default("#f97316")
+  secondaryColor String   @default("#1f2937")
+  logoLight      String?
+  logoDark       String?
+  updatedAt      DateTime @updatedAt
+
+  @@map("theme_settings")
+}
+
+model BankAccount {
+  id            String   @id @default(cuid())
+  type          String   @default("transfer")
+  bankName      String
+  accountHolder String
+  iban          String?
+  nib           String?
+  accountNumber String?
+  swift         String?
+  currency      String   @default("AOA")
+  country       String   @default("Angola")
+  active        Boolean  @default(true)
+  qrCode        String?
+  logoUrl       String?
+  notes         String?
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("bank_accounts")
+}
+
+model ApprovalRequest {
+  id              String   @id @default(cuid())
+  type            String
+  targetId        String
+  targetType      String
+  targetLabel     String?
+  requestedBy     String
+  requestedByName String?
+  status          String   @default("pending")
+  approvedBy      String?
+  approvedByName  String?
+  comment         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status])
+  @@map("approval_requests")
+}
+
+model RolePermission {
+  id          String   @id @default(cuid())
+  role        UserRole @unique
+  permissions Json
+  updatedAt   DateTime @updatedAt
+
+  @@map("role_permissions")
 }
 
