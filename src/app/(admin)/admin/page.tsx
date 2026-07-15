@@ -17,15 +17,11 @@ async function getDashboardData() {
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
   const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
 
+  // Core queries — always available
   const [
     totalOrders, monthOrders, lastMonthOrders,
     totalRevenue, monthRevenue, lastMonthRevenue,
-    totalCustomers, suspendedCustomers, bannedCustomers,
-    recentOrders, lowStockProducts,
-    // Sprint 6 KPIs
-    customOrdersTotal, customOrdersPending, customOrdersInProgress,
-    affiliatesTotal, affiliatesPendingPayout,
-    unreadNotifications,
+    totalCustomers, recentOrders,
   ] = await Promise.all([
     prisma.order.count({ where: { status: { not: 'cancelled' } } }),
     prisma.order.count({ where: { createdAt: { gte: startOfMonth }, status: { not: 'cancelled' } } }),
@@ -33,28 +29,36 @@ async function getDashboardData() {
     prisma.order.aggregate({ _sum: { total: true }, where: { status: { not: 'cancelled' } } }),
     prisma.order.aggregate({ _sum: { total: true }, where: { createdAt: { gte: startOfMonth }, status: { not: 'cancelled' } } }),
     prisma.order.aggregate({ _sum: { total: true }, where: { createdAt: { gte: startOfLastMonth, lt: startOfMonth }, status: { not: 'cancelled' } } }),
-    prisma.customer.count({ where: { active: true, bannedAt: null, suspendedAt: null, deletedAt: null } }),
-    prisma.customer.count({ where: { suspendedAt: { not: null }, bannedAt: null, deletedAt: null } }),
-    prisma.customer.count({ where: { bannedAt: { not: null }, deletedAt: null } }),
+    prisma.customer.count({ where: { active: true } }),
     prisma.order.findMany({
       orderBy: { createdAt: 'desc' },
       take: 10,
       include: { customer: { select: { name: true } }, payments: { select: { paymentMethod: true, paymentStatus: true } } },
     }),
-    prisma.product.findMany({
-      where: { active: true, stock: { lte: prisma.product.fields.minStock } },
-      select: { id: true, name: true, stock: true, minStock: true },
-      take: 5,
-    }),
-    // Custom orders
-    prisma.customOrder.count({ where: { deletedAt: null } }),
-    prisma.customOrder.count({ where: { status: 'pending' as const, deletedAt: null } }),
-    prisma.customOrder.count({ where: { status: { in: ['quoted', 'accepted', 'in_production'] as const }, deletedAt: null } }),
-    // Affiliates
-    prisma.affiliate.count({ where: { active: true } }),
-    prisma.affiliatePayoutRequest.count({ where: { status: 'pending' as const } }),
-    // Notifications
-    prisma.notification.count({ where: { read: false, customerId: null } }),
+  ])
+
+  // Low stock (may fail if minStock field missing)
+  const lowStockProducts = await prisma.product.findMany({
+    where: { active: true, stock: { lte: 5 } },
+    select: { id: true, name: true, stock: true, minStock: true },
+    take: 5,
+  }).catch(() => [] as { id: string; name: string; stock: number; minStock: number }[])
+
+  // Sprint 6 KPIs — wrapped individually so a missing model doesn't crash the page
+  const [
+    suspendedCustomers, bannedCustomers,
+    customOrdersTotal, customOrdersPending, customOrdersInProgress,
+    affiliatesTotal, affiliatesPendingPayout,
+    unreadNotifications,
+  ] = await Promise.all([
+    prisma.customer.count({ where: { suspendedAt: { not: null }, deletedAt: null } }).catch(() => 0),
+    prisma.customer.count({ where: { bannedAt: { not: null }, deletedAt: null } }).catch(() => 0),
+    prisma.customOrder.count({ where: { deletedAt: null } }).catch(() => 0),
+    prisma.customOrder.count({ where: { status: 'pending' as const, deletedAt: null } }).catch(() => 0),
+    prisma.customOrder.count({ where: { status: { in: ['quoted', 'accepted', 'in_production'] as const }, deletedAt: null } }).catch(() => 0),
+    prisma.affiliate.count({ where: { status: 'active' as const } }).catch(() => 0),
+    prisma.affiliatePayoutRequest.count({ where: { status: 'pending' as const } }).catch(() => 0),
+    prisma.notification.count({ where: { read: false, customerId: null } }).catch(() => 0),
   ])
 
   const monthOrdersChange = lastMonthOrders > 0
