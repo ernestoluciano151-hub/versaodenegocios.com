@@ -6,26 +6,61 @@ import { useCartStore } from '@/store/cart'
 import { useUIStore } from '@/store/ui'
 import { useState, useEffect, memo } from 'react'
 
-const navLinks = [
+interface NavCategory {
+  id: string
+  name: string
+  slug: string
+}
+
+// Static fallback nav links (shown while categories load or if fetch fails)
+const staticNavLinks = [
   { href: '/produtos', label: 'Produtos' },
-  { href: '/produtos?categoria=smartphones', label: 'Smartphones' },
-  { href: '/produtos?categoria=computadores', label: 'Computadores' },
-  { href: '/produtos?categoria=audio', label: 'Áudio' },
   { href: '/produtos?destaque=true', label: '🔥 Promoções' },
 ]
 
 export const Header = memo(function Header() {
   const { getItemCount } = useCartStore()
   const { openCart, openSearch, mobileMenuOpen, openMobileMenu, closeMobileMenu } = useUIStore()
-
-  // Prevent hydration mismatch: only show cart count client-side
   const [mounted, setMounted] = useState(false)
-  useEffect(() => { setMounted(true) }, [])
+  const [categories, setCategories] = useState<NavCategory[]>([])
+
+  useEffect(() => {
+    setMounted(true)
+    // Fetch top-level menu categories from /api/categories
+    // API returns array of active+visible top-level categories
+    fetch('/api/categories')
+      .then((r) => r.ok ? r.json() : Promise.reject(r.status))
+      .then((data: unknown) => {
+        const list = Array.isArray(data)
+          ? (data as NavCategory[]).filter((c) => c.name && c.slug)
+          : []
+        setCategories(list.slice(0, 5))
+      })
+      .catch(() => {
+        // Silently fall back to static links
+      })
+  }, [])
+
   const itemCount = mounted ? getItemCount() : 0
+
+  // Build nav links: always include "Produtos" first, then dynamic categories, then Promoções
+  const categoryLinks: { href: string; label: string }[] = categories.map((c) => ({
+    href: `/categoria/${c.slug}`,
+    label: c.name,
+  }))
+
+  const navLinks = [
+    { href: '/produtos', label: 'Produtos' },
+    ...categoryLinks,
+    { href: '/produtos?destaque=true', label: '🔥 Promoções' },
+  ]
+
+  // Render simplified nav while not yet mounted (SSR / hydration)
+  const displayLinks = mounted ? navLinks : staticNavLinks
 
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
-      {/* Promo bar — fixed height to prevent CLS */}
+      {/* Promo bar */}
       <div className="bg-gray-900 text-white text-xs py-1.5 text-center h-7 flex items-center justify-center">
         🚚 Entrega ao domicílio em Luanda · Pagamento na Entrega disponível
       </div>
@@ -42,7 +77,7 @@ export const Header = memo(function Header() {
 
           {/* Desktop nav */}
           <nav className="hidden lg:flex items-center gap-6" aria-label="Navegação principal">
-            {navLinks.map((link) => (
+            {displayLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -79,14 +114,13 @@ export const Header = memo(function Header() {
               <User className="w-5 h-5" aria-hidden />
             </Link>
 
-            {/* Cart — reserve space always to prevent CLS */}
+            {/* Cart */}
             <button
               onClick={openCart}
               className="relative p-2 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-orange-500 transition-colors"
               aria-label={`Carrinho${itemCount > 0 ? ` (${itemCount} itens)` : ''}`}
             >
               <ShoppingCart className="w-5 h-5" aria-hidden />
-              {/* Always render the badge container with fixed size */}
               <span
                 className={`absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold transition-all duration-200 ${itemCount > 0 ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}
                 aria-hidden
@@ -107,13 +141,13 @@ export const Header = memo(function Header() {
         </div>
       </div>
 
-      {/* Mobile menu — animate smoothly */}
+      {/* Mobile menu */}
       <div
         className={`lg:hidden border-t border-gray-200 bg-white overflow-hidden transition-all duration-200 ease-in-out ${mobileMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
         aria-hidden={!mobileMenuOpen}
       >
         <nav className="flex flex-col gap-1 px-4 py-4" aria-label="Menu móvel">
-          {navLinks.map((link) => (
+          {displayLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
