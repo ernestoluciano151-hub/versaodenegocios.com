@@ -61,7 +61,7 @@ async function getProducts(params: SearchParams) {
   const [products, total, categories, brands] = await Promise.all([
     prisma.product.findMany({ where, include: { category: true }, orderBy, skip, take: limit }),
     prisma.product.count({ where }),
-    prisma.category.findMany({ where: { active: true, parentId: null }, orderBy: { order: 'asc' } }),
+    prisma.category.findMany({ where: { active: true, parentId: null }, orderBy: { displayOrder: 'asc' } }),
     prisma.product.findMany({ where: { active: true }, select: { brand: true }, distinct: ['brand'], orderBy: { brand: 'asc' } }),
   ])
 

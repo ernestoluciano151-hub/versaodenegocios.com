@@ -37,7 +37,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   })
 
   const discount = product.salePrice ? calculateDiscount(Number(product.price), Number(product.salePrice)) : 0
-  const specs = product.technicalSpecs as Record<string, string>
+  const specs = (product.technicalSpecs as Record<string, string> | null) ?? {}
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -75,7 +75,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         {/* Info */}
         <div>
           <div className="flex flex-wrap items-center gap-2 mb-3">
-            <Badge variant="secondary">{product.category.name}</Badge>
+            {product.category && <Badge variant="secondary">{product.category.name}</Badge>}
             {product.isNew && <Badge variant="success">Novo</Badge>}
             {product.isBestseller && <Badge variant="default">Mais Vendido</Badge>}
             {product.stock === 0 && <Badge variant="destructive">Esgotado</Badge>}

@@ -38,7 +38,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const { id } = await params
   const body = await req.json()
-  const order = await prisma.order.update({ where: { id }, data: body })
+  // Allowlist only safe fields — never pass raw body to Prisma (mass assignment)
+  const { status, notes, trackingNumber } = body
+  const data: Record<string, unknown> = {}
+  if (status !== undefined) data.status = status
+  if (notes !== undefined) data.notes = notes
+  if (trackingNumber !== undefined) data.trackingNumber = trackingNumber
+  const order = await prisma.order.update({ where: { id }, data })
   return NextResponse.json(order)
 }
 

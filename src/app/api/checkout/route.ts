@@ -107,11 +107,21 @@ export async function POST(req: NextRequest) {
       where: { code: couponCode, active: true },
     })
     if (coupon) {
+      // Check expiry
+      if (coupon.expiresAt && coupon.expiresAt < new Date()) {
+        return NextResponse.json({ error: 'Este cupão expirou.' }, { status: 400 })
+      }
+      // Check usage limit
+      if (coupon.maxUses !== null && coupon.usedCount >= coupon.maxUses) {
+        return NextResponse.json({ error: 'Este cupão atingiu o limite de utilizações.' }, { status: 400 })
+      }
       couponDiscount =
         coupon.type === 'percentage'
           ? (subtotal * Number(coupon.value)) / 100
           : Number(coupon.value)
       couponId = coupon.id
+    } else {
+      return NextResponse.json({ error: 'Cupão inválido ou inativo.' }, { status: 400 })
     }
   }
 

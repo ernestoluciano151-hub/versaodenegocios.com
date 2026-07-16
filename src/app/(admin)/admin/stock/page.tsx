@@ -7,17 +7,13 @@ import { formatDate } from '@/lib/utils'
 import { AlertTriangle, Package } from 'lucide-react'
 
 async function getStockData(filter?: string) {
-  const where =
-    filter === 'low' ? { active: true, stock: { lte: 5 } } // approximate, no field ref comparison
-    : filter === 'out' ? { active: true, stock: 0 }
-    : { active: true }
-
-  const [products, movements] = await Promise.all([
+  // Always fetch all active products — filter in memory so 'low' uses each
+  // product's own minStock rather than a hardcoded threshold.
+  const [allProducts, movements] = await Promise.all([
     prisma.product.findMany({
-      where,
+      where: { active: true },
       select: { id: true, name: true, brand: true, sku: true, stock: true, minStock: true, images: true, category: { select: { name: true } } },
       orderBy: { stock: 'asc' },
-      take: 100,
     }),
     prisma.inventoryMovement.findMany({
       orderBy: { createdAt: 'desc' },
@@ -25,15 +21,15 @@ async function getStockData(filter?: string) {
       include: { product: { select: { name: true, sku: true } } },
     }),
   ])
-  return { products, movements }
+  const lowStock = allProducts.filter(p => p.stock > 0 && p.stock <= p.minStock)
+  const outOfStock = allProducts.filter(p => p.stock === 0)
+  const products = filter === 'low' ? lowStock : filter === 'out' ? outOfStock : allProducts
+  return { products, allProducts, lowStock, outOfStock, movements }
 }
 
 export default async function StockPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
   const { filter } = await searchParams
-  const { products, movements } = await getStockData(filter)
-
-  const lowStock = products.filter(p => p.stock > 0 && p.stock <= p.minStock)
-  const outOfStock = products.filter(p => p.stock === 0)
+  const { products, allProducts, lowStock, outOfStock, movements } = await getStockData(filter)
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -43,7 +39,7 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white rounded-xl border border-gray-200 p-4">
             <Package className="w-5 h-5 text-gray-400 mb-1" />
-            <p className="text-2xl font-bold text-gray-900">{products.length}</p>
+            <p className="text-2xl font-bold text-gray-900">{allProducts.length}</p>
             <p className="text-xs text-gray-500">Produtos Activos</p>
           </div>
           <div className="bg-orange-50 rounded-xl border border-orange-200 p-4">
@@ -58,7 +54,7 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
           </div>
           <div className="bg-white rounded-xl border border-gray-200 p-4">
             <Package className="w-5 h-5 text-gray-400 mb-1" />
-            <p className="text-2xl font-bold text-gray-900">{products.reduce((s, p) => s + p.stock, 0)}</p>
+            <p className="text-2xl font-bold text-gray-900">{allProducts.reduce((s, p) => s + p.stock, 0)}</p>
             <p className="text-xs text-gray-500">Total Unidades</p>
           </div>
         </div>

@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Package, Tag, Users, ShoppingBag, CreditCard,
   Warehouse, Plane, Building2, TrendingUp, Megaphone, FileBarChart,
   Settings, Zap, LifeBuoy, Mail, MessageSquare, Star, UserCheck,
-  BarChart3, X, ClipboardList,
+  BarChart3, X, ClipboardList, Image, ShoppingCart,
 } from 'lucide-react'
 import { useUIStore } from '@/store/ui'
 import { cn } from '@/lib/utils'
@@ -24,6 +24,9 @@ const navItems = [
   { href: '/admin/importacoes', label: 'Importações', icon: Plane },
   { href: '/admin/fornecedores', label: 'Fornecedores', icon: Building2 },
   { href: '/admin/financeiro', label: 'Financeiro', icon: TrendingUp },
+  { href: '/admin/banners', label: 'Banners', icon: Image },
+  { href: '/admin/carrinhos', label: 'Carrinhos', icon: ShoppingCart },
+  { href: '/admin/avaliacoes', label: 'Avaliações', icon: Star },
   { href: '/admin/marketing', label: 'Marketing', icon: Megaphone },
   { href: '/admin/newsletter', label: 'Newsletter', icon: Mail },
   { href: '/admin/relatorios', label: 'Relatórios', icon: FileBarChart },
