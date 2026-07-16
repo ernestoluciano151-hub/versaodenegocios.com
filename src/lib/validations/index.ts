@@ -1,6 +1,17 @@
 import { z } from 'zod'
 
-export const checkoutSchema = z.object({
+export const cartItemSchema = z.object({
+  productId: z.string().min(1, 'productId obrigatório'),
+  quantity: z.number().int().positive('Quantidade inválida'),
+  name: z.string().optional(),
+  price: z.number().positive().optional(),
+  salePrice: z.number().positive().optional().nullable(),
+  brand: z.string().optional(),
+  image: z.string().optional(),
+})
+
+/** Used by react-hook-form on the checkout page (form fields only) */
+export const checkoutFormSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
   email: z.string().email('Email inválido'),
   phone: z.string().min(9, 'Telefone inválido'),
@@ -11,6 +22,12 @@ export const checkoutSchema = z.object({
   notes: z.string().optional(),
   paymentMethod: z.enum(['cash_on_delivery', 'multicaixa_express']),
   couponCode: z.string().optional(),
+})
+
+/** Full schema used by the API route (includes cart items + idempotency key) */
+export const checkoutSchema = checkoutFormSchema.extend({
+  items: z.array(cartItemSchema).min(1, 'Carrinho vazio'),
+  idempotencyKey: z.string().uuid('Chave de idempotência inválida').optional(),
 })
 
 export const productSchema = z.object({
@@ -67,7 +84,7 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Palavra-passe obrigatória'),
 })
 
-export type CheckoutFormData = z.infer<typeof checkoutSchema>
+export type CheckoutFormData = z.infer<typeof checkoutFormSchema>
 export type ProductFormData = z.infer<typeof productSchema>
 export type CategoryFormData = z.infer<typeof categorySchema>
 export type CouponFormData = z.infer<typeof couponSchema>

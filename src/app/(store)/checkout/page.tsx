@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { formatCurrency } from '@/lib/utils'
-import { checkoutSchema, type CheckoutFormData } from '@/lib/validations'
+import { checkoutFormSchema, type CheckoutFormData } from '@/lib/validations'
 import Image from 'next/image'
 
 export default function CheckoutPage() {
@@ -24,7 +24,7 @@ export default function CheckoutPage() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { register, handleSubmit, watch, formState: { errors } } = useForm<CheckoutFormData>({
-    resolver: zodResolver(checkoutSchema) as any,
+    resolver: zodResolver(checkoutFormSchema) as any,
     defaultValues: { paymentMethod: 'cash_on_delivery', country: 'Angola' },
   })
 
@@ -36,10 +36,17 @@ export default function CheckoutPage() {
     setLoading(true)
     setError('')
     try {
+      // Generate a UUID idempotency key to prevent duplicate orders on double-submit
+      const idempotencyKey = crypto.randomUUID()
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...data, items: activeItems, totals, couponCode }),
+        body: JSON.stringify({
+          ...data,
+          items: activeItems,
+          couponCode,
+          idempotencyKey,
+        }),
       })
       const result = await res.json()
       if (!res.ok) throw new Error(result.error ?? 'Erro ao processar pedido.')
