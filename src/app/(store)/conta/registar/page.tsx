@@ -1,9 +1,10 @@
 'use client'
 import { useState } from 'react'
+import Image from 'next/image'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Zap, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -23,8 +24,7 @@ export default function ContaRegistarPage() {
     const res = await fetch('/api/conta/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: form.name, email: form.email, phone: form.phone, password: form.password }),
-    })
+      body: JSON.stringify({ name: form.name, email: form.email, phone: form.phone, password: form.password }) })
     if (!res.ok) {
       const data = await res.json()
       setError(data.error ?? 'Erro ao criar conta.')
@@ -43,7 +43,7 @@ export default function ContaRegistarPage() {
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 mb-6">
             <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
-              <Zap className="w-6 h-6 text-white" />
+              <className="w-6 h-6 text-white" />
             </div>
             <span className="text-2xl font-bold text-gray-900">VN Commerce</span>
           </Link>

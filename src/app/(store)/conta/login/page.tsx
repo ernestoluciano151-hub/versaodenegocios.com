@@ -1,9 +1,10 @@
 'use client'
 import { useState, Suspense } from 'react'
+import Image from 'next/image'
 import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Zap, Loader2, Eye, EyeOff } from 'lucide-react'
+import { Loader2, Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -71,7 +72,7 @@ export default function ContaLoginPage() {
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 mb-6">
             <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
-              <Zap className="w-6 h-6 text-white" />
+              <className="w-6 h-6 text-white" />
             </div>
             <span className="text-2xl font-bold text-gray-900">VN Commerce</span>
           </Link>

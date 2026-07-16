@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import Link from 'next/link'
-import { Zap, MapPin, Phone, Mail, Shield, Truck, CreditCard, Users } from 'lucide-react'
+import { MapPin, Phone, Mail, Shield, Truck, CreditCard, Users } from 'lucide-react'
 
 export const metadata: Metadata = {
   title: 'Sobre Nós | VN Commerce',
-  description: 'Conheça a VN Commerce — especialistas em produtos eletrónicos importados em Angola.',
-}
+  description: 'Conheça a VN Commerce — especialistas em produtos eletrónicos importados em Angola.' }
 
 export default function SobrePage() {
   return (
@@ -15,7 +15,7 @@ export default function SobrePage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="flex justify-center mb-6">
             <div className="w-16 h-16 bg-orange-500 rounded-2xl flex items-center justify-center">
-              <Zap className="w-9 h-9 text-white" />
+              <className="w-9 h-9 text-white" />
             </div>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold mb-4">Sobre a VN Commerce</h1>

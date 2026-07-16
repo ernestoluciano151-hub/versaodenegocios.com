@@ -5,10 +5,11 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Package, Tag, Users, ShoppingBag, CreditCard,
   Warehouse, Plane, Building2, TrendingUp, Megaphone, FileBarChart,
-  Settings, Zap, ChevronLeft, ChevronRight, LifeBuoy, Mail,
+  Settings, ChevronLeft, ChevronRight, LifeBuoy, Mail,
   MessageSquare, Star, UserCheck, BarChart3, ClipboardList,
-  Image, ShoppingCart, Truck,
+  ShoppingCart, Truck,
 } from 'lucide-react'
+import NextImage from 'next/image'
 import { useUIStore } from '@/store/ui'
 import { cn } from '@/lib/utils'
 
@@ -52,9 +53,7 @@ export function Sidebar() {
     >
       {/* Logo */}
       <div className="flex items-center gap-2 px-4 h-16 border-b border-gray-800">
-        <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center flex-shrink-0">
-          <Zap className="w-5 h-5 text-white" />
-        </div>
+        <NextImage src="/icons/icon-96x96.png" alt="VN Commerce" width={32} height={32} className="rounded-lg flex-shrink-0" />
         {sidebarOpen && <span className="font-bold text-white truncate">VN Commerce Admin</span>}
       </div>
 

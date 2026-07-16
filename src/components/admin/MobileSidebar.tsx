@@ -1,13 +1,13 @@
 'use client'
 
 import Link from 'next/link'
+import NextImage from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Package, Tag, Users, ShoppingBag, CreditCard,
   Warehouse, Plane, Building2, TrendingUp, Megaphone, FileBarChart,
-  Settings, Zap, LifeBuoy, Mail, MessageSquare, Star, UserCheck,
-  BarChart3, X, ClipboardList, Image, ShoppingCart, Truck,
-} from 'lucide-react'
+  Settings, LifeBuoy, Mail, MessageSquare, Star, UserCheck,
+  BarChart3, X, ClipboardList, Image, ShoppingCart, Truck } from 'lucide-react'
 import { useUIStore } from '@/store/ui'
 import { cn } from '@/lib/utils'
 import { useEffect } from 'react'
@@ -70,7 +70,7 @@ export function MobileSidebar() {
         <div className="flex items-center justify-between px-4 h-16 border-b border-gray-800">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
-              <Zap className="w-5 h-5 text-white" />
+              <className="w-5 h-5 text-white" />
             </div>
             <span className="font-bold text-white">VN Commerce</span>
           </div>

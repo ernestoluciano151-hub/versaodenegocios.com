@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Zap, Lock } from 'lucide-react'
+import { Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -16,16 +17,14 @@ export default function AdminLoginPage() {
   const [error, setError] = useState('')
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
-  })
+    resolver: zodResolver(loginSchema) })
 
   async function onSubmit(data: LoginFormData) {
     setError('')
     const result = await signIn('admin-credentials', {
       email: data.email,
       password: data.password,
-      redirect: false,
-    })
+      redirect: false })
     if (result?.error) {
       setError('Credenciais inválidas.')
       return
@@ -41,7 +40,7 @@ export default function AdminLoginPage() {
         <div className="flex justify-center mb-8">
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
-              <Zap className="w-6 h-6 text-white" />
+              <className="w-6 h-6 text-white" />
             </div>
             <span className="text-2xl font-bold text-white">VN Commerce</span>
           </div>

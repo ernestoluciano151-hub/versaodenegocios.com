@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { ShoppingCart, Search, Heart, User, Menu, X, Zap } from 'lucide-react'
+import { ShoppingCart, Search, Heart, User, Menu, X } from 'lucide-react'
+import Image from 'next/image'
 import { useCartStore } from '@/store/cart'
 import { useUIStore } from '@/store/ui'
 import { useState, useEffect, memo } from 'react'
@@ -69,9 +70,7 @@ export const Header = memo(function Header() {
         <div className="flex items-center justify-between h-16 gap-4">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 flex-shrink-0" aria-label="VN Commerce — início">
-            <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Zap className="w-5 h-5 text-white" aria-hidden />
-            </div>
+            <Image src="/icons/icon-96x96.png" alt="VN Commerce" width={36} height={36} className="rounded-lg flex-shrink-0" priority />
             <span className="text-xl font-bold text-gray-900 hidden sm:block">VN Commerce</span>
           </Link>
 
