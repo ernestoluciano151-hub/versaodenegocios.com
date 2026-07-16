@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-export const dynamic = 'force-dynamic'
+// Revalidate at most once per 60 seconds — categories change infrequently
+export const revalidate = 60
 
 export async function GET() {
   try {
@@ -33,7 +34,9 @@ export async function GET() {
       },
     })
 
-    return NextResponse.json(categories)
+    return NextResponse.json(categories, {
+      headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' },
+    })
   } catch (err) {
     console.error('[GET /api/categories]', err)
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })

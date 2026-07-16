@@ -7,13 +7,6 @@ import { checkoutSchema } from '@/lib/validations'
 import { rateLimit } from '@/lib/rate-limit'
 import { logError } from '@/lib/logger'
 
-// ---------------------------------------------------------------------------
-// In-memory idempotency store (per serverless instance, 60 s TTL).
-// For multi-instance production: replace with Upstash Redis / Vercel KV.
-// ---------------------------------------------------------------------------
-const idempotencyStore = new Map<string, string>() // key → orderId
-setInterval(() => idempotencyStore.clear(), 60_000)
-
 // Shipping cost (server-authoritative — never trust the client)
 const SHIPPING_COST = 0
 
@@ -54,12 +47,15 @@ export async function POST(req: NextRequest) {
     items, idempotencyKey,
   } = parsed.data
 
-  // ── Idempotency check ─────────────────────────────────────────────────────
+  // ── Idempotency check (DB-backed — works across all serverless instances) ──
   if (idempotencyKey) {
-    const existingOrderId = idempotencyStore.get(idempotencyKey)
-    if (existingOrderId) {
+    const existing = await prisma.order.findUnique({
+      where: { idempotencyKey },
+      select: { id: true },
+    })
+    if (existing) {
       return NextResponse.json(
-        { orderId: existingOrderId, duplicate: true },
+        { orderId: existing.id, duplicate: true },
         { status: 200 },
       )
     }
@@ -160,6 +156,7 @@ export async function POST(req: NextRequest) {
           total,
           notes,
           couponCode: couponCode ?? undefined,
+          idempotencyKey: idempotencyKey ?? undefined,
           shippingAddress: { name, email, phone, street, city, province, country },
           items: {
             create: items.map((item) => {
@@ -218,11 +215,6 @@ export async function POST(req: NextRequest) {
     const message = err instanceof Error ? err.message : 'Erro ao processar pedido.'
     logError(err, 'checkout:transaction')
     return NextResponse.json({ error: message }, { status: 400 })
-  }
-
-  // ── Store idempotency key AFTER successful creation ───────────────────────
-  if (idempotencyKey) {
-    idempotencyStore.set(idempotencyKey, order.id)
   }
 
   // ── Process payment (outside transaction — external call) ─────────────────

@@ -7,7 +7,7 @@ export async function GET() {
   if (error) return error
 
   try {
-    const permissions = await prisma.rolePermission.findMany()
+    const permissions = await prisma.rolePermission.findMany({ take: 50 })
     return NextResponse.json(permissions)
   } catch (err) {
     console.error('GET /api/admin/role-permissions error:', err)

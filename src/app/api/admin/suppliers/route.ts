@@ -2,16 +2,25 @@ import { prisma } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const { error } = await requireAdmin()
   if (error) return error
 
+  const { searchParams } = req.nextUrl
+  const page = Math.max(1, Number(searchParams.get('page') ?? 1))
+  const limit = Math.min(100, Math.max(1, Number(searchParams.get('limit') ?? 50)))
+  const skip = (page - 1) * limit
 
-  const suppliers = await prisma.supplier.findMany({
-    orderBy: { name: 'asc' },
-    include: { _count: { select: { imports: true } } },
-  })
-  return NextResponse.json(suppliers)
+  const [suppliers, total] = await Promise.all([
+    prisma.supplier.findMany({
+      orderBy: { name: 'asc' },
+      include: { _count: { select: { imports: true } } },
+      skip,
+      take: limit,
+    }),
+    prisma.supplier.count(),
+  ])
+  return NextResponse.json({ suppliers, total, page, totalPages: Math.ceil(total / limit) })
 }
 
 export async function POST(req: NextRequest) {

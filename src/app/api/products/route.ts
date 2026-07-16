@@ -27,7 +27,14 @@ export async function GET(req: NextRequest) {
     prisma.product.count({ where: w }),
   ])
 
-  return NextResponse.json({ products, total, page, totalPages: Math.ceil(total / limit) })
+  // Cache public listings for 30s at the edge — search queries are not cached (vary by params)
+  const cacheHeader = search || categoria
+    ? 'no-store'
+    : 'public, s-maxage=30, stale-while-revalidate=120'
+
+  return NextResponse.json({ products, total, page, totalPages: Math.ceil(total / limit) }, {
+    headers: { 'Cache-Control': cacheHeader },
+  })
 }
 
 export async function POST(req: NextRequest) {
