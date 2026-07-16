@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
       type: 'new_custom_order',
       title: 'Nova Encomenda Personalizada',
       message: `O cliente ${customer.name} (${customer.email}) submeteu uma nova encomenda personalizada: ${order.productName} (${reference}).`,
-      data: { orderId: order.id, customerId: customer.id },
+      data: { orderId: order.id, customerId: customer.id, route: `/admin/encomendas-personalizadas/${order.id}` },
     },
   })
 

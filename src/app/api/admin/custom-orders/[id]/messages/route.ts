@@ -45,7 +45,7 @@ export async function POST(
       type: 'custom_order_message',
       title: 'Nova resposta à sua encomenda',
       message: `A sua encomenda ${order.reference} tem uma nova resposta.`,
-      data: { orderId: id },
+      data: { orderId: id, route: '/conta/encomendas-personalizadas' },
     },
   })
 

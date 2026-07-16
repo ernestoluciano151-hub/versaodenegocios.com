@@ -2,6 +2,7 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { RefreshCw, Home } from 'lucide-react'
+import { logError } from '@/lib/logger'
 
 export default function StoreError({
   error,
@@ -11,7 +12,7 @@ export default function StoreError({
   reset: () => void
 }) {
   useEffect(() => {
-    console.error('[Store Error]', error)
+    logError(error, 'store-error-boundary')
   }, [error])
 
   return (
@@ -21,6 +22,7 @@ export default function StoreError({
       <p className="text-gray-500 mb-8 max-w-sm">
         Não foi possível carregar esta página. Por favor tente novamente.
       </p>
+      {error.digest && <p className="mt-2 text-xs text-gray-400">Código: {error.digest}</p>}
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
         <button
           onClick={reset}

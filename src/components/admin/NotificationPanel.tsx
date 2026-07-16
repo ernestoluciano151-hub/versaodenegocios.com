@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { Bell, X, Check, CheckCheck, Trash2, Filter, ShoppingBag, CreditCard, Package, Ticket, Users, Star, AlertTriangle, ClipboardList } from 'lucide-react'
+import { getAdminRoute, NotificationData } from '@/lib/notification-routes'
 
 type NotifType = 'order' | 'payment' | 'stock' | 'ticket' | 'affiliate' | 'custom_order' | 'customer' | 'system'
 
@@ -49,6 +51,7 @@ function timeAgo(date: string): string {
 }
 
 export function NotificationPanel() {
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
@@ -68,6 +71,39 @@ export function NotificationPanel() {
     } catch {}
   }, [filter])
 
+  // SSE connection
+  useEffect(() => {
+    let es: EventSource | null = null
+    let retries = 0
+
+    function connect() {
+      es = new EventSource('/api/admin/notifications/stream')
+      es.onmessage = (e) => {
+        const msg = JSON.parse(e.data)
+        if (msg.type === 'notifications') {
+          setNotifications(prev => {
+            const newIds = new Set(msg.notifications.map((n: Notification) => n.id))
+            const merged = [...msg.notifications, ...prev.filter(p => !newIds.has(p.id))]
+            return merged.slice(0, 50)
+          })
+          setUnreadCount(msg.unreadCount)
+        } else if (msg.type === 'heartbeat') {
+          setUnreadCount(msg.unreadCount)
+        }
+        retries = 0
+      }
+      es.onerror = () => {
+        es?.close()
+        retries++
+        if (retries < 5) setTimeout(connect, Math.min(30000, 3000 * retries))
+      }
+    }
+
+    connect()
+    return () => es?.close()
+  }, [])
+
+  // Polling fallback every 30s
   useEffect(() => {
     fetchNotifications()
     const interval = setInterval(fetchNotifications, 30000)
@@ -101,6 +137,13 @@ export function NotificationPanel() {
     const n = notifications.find(n => n.id === id)
     setNotifications(prev => prev.filter(n => n.id !== id))
     if (n && !n.read) setUnreadCount(prev => Math.max(0, prev - 1))
+  }
+
+  async function handleNotificationClick(n: Notification) {
+    if (!n.read) await markRead(n.id)
+    setOpen(false)
+    const route = getAdminRoute(n.type, n.data as NotificationData)
+    if (route) router.push(route)
   }
 
   const filtered = filter === 'all' ? notifications : notifications.filter(n => n.type === filter)
@@ -184,7 +227,7 @@ export function NotificationPanel() {
                 return (
                   <div
                     key={n.id}
-                    onClick={() => !n.read && markRead(n.id)}
+                    onClick={() => handleNotificationClick(n)}
                     className={`flex items-start gap-3 p-3 cursor-pointer hover:bg-gray-50 transition-colors group ${!n.read ? 'bg-orange-50/40' : ''}`}
                   >
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${color}`}>
