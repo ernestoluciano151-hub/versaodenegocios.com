@@ -1263,3 +1263,23 @@ model AffiliatePayoutRequest {
   @@index([affiliateId])
   @@map("affiliate_payout_requests")
 }
+
+
+model HeroBanner {
+  id          String   @id @default(cuid())
+  title       String
+  subtitle    String?
+  ctaLabel    String?
+  ctaUrl      String?
+  ctaLabel2   String?
+  ctaUrl2     String?
+  imageUrl    String?
+  bgColor     String   @default("#111827")
+  textColor   String   @default("#ffffff")
+  order       Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("hero_banners")
+}

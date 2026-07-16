@@ -4,6 +4,22 @@ import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  let customer
+  try { customer = await requireCustomerSession() } catch {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  const { id } = await params
+  const notification = await prisma.notification.findFirst({
+    where: { id, customerId: customer.id },
+  })
+  if (!notification) return NextResponse.json({ error: 'Não encontrado' }, { status: 404 })
+  return NextResponse.json(notification)
+}
+
 export async function PATCH(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

@@ -7,6 +7,8 @@ import Image from 'next/image'
 import { prisma } from '@/lib/prisma'
 import { ChevronRight, Home, PackageOpen } from 'lucide-react'
 
+const PAGE_SIZE = 24
+
 // ─── Currency formatter ───────────────────────────────────────────────────────
 function formatAOA(value: number | { toNumber?: () => number } | null | undefined): string {
   const num = value == null ? 0 : typeof value === 'object' && typeof value.toNumber === 'function' ? value.toNumber() : Number(value)
@@ -37,10 +39,14 @@ export async function generateMetadata({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default async function CategoryPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>
+  searchParams?: Promise<{ page?: string }>
 }) {
   const { slug } = await params
+  const sp = await searchParams
+  const page = Math.max(1, parseInt(sp?.page ?? '1', 10))
 
   // 1. Fetch category
   const category = await prisma.category.findUnique({
@@ -59,20 +65,19 @@ export default async function CategoryPage({
     return notFound()
   }
 
-  // 2. Fetch products
-  const products = await prisma.product.findMany({
-    where: {
-      categoryId: category.id,
-      active: true,
-      deletedAt: null,
-      visibility: 'visible',
-    },
-    include: {
-      category: { select: { name: true, slug: true } },
-    },
-    orderBy: { createdAt: 'desc' },
-    take: 24,
-  })
+  // 2. Fetch products (paginated)
+  const where = { categoryId: category.id, active: true, deletedAt: null, visibility: 'visible' as const }
+  const [products, totalProducts] = await Promise.all([
+    prisma.product.findMany({
+      where,
+      include: { category: { select: { name: true, slug: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: PAGE_SIZE,
+      skip: (page - 1) * PAGE_SIZE,
+    }),
+    prisma.product.count({ where }),
+  ])
+  const totalPages = Math.ceil(totalProducts / PAGE_SIZE)
 
   // 3. Fetch subcategories
   const subcategories = await prisma.category.findMany({
@@ -200,7 +205,7 @@ export default async function CategoryPage({
             <h2 className="text-lg font-semibold text-gray-900">
               Produtos{' '}
               <span className="text-sm font-normal text-gray-400">
-                ({products.length})
+                ({totalProducts})
               </span>
             </h2>
           </div>
@@ -284,6 +289,40 @@ export default async function CategoryPage({
                   </Link>
                 )
               })}
+            </div>
+          )}
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-10">
+              {page > 1 && (
+                <Link
+                  href={`/categoria/${slug}?page=${page - 1}`}
+                  className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:border-orange-500 hover:text-orange-500 transition-colors"
+                >
+                  ← Anterior
+                </Link>
+              )}
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <Link
+                  key={p}
+                  href={`/categoria/${slug}?page=${p}`}
+                  className={`w-9 h-9 rounded-lg text-sm font-medium flex items-center justify-center transition-colors ${
+                    p === page
+                      ? 'bg-orange-500 text-white'
+                      : 'border border-gray-200 text-gray-700 hover:border-orange-500 hover:text-orange-500'
+                  }`}
+                >
+                  {p}
+                </Link>
+              ))}
+              {page < totalPages && (
+                <Link
+                  href={`/categoria/${slug}?page=${page + 1}`}
+                  className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:border-orange-500 hover:text-orange-500 transition-colors"
+                >
+                  Próxima →
+                </Link>
+              )}
             </div>
           )}
         </section>
