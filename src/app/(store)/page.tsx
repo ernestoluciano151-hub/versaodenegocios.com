@@ -38,7 +38,7 @@ async function getBestsellers() {
 async function getCategories() {
   return prisma.category.findMany({
     where: { active: true, parentId: null },
-    orderBy: { order: 'asc' },
+    orderBy: { displayOrder: 'asc' },
     take: 8,
   })
 }

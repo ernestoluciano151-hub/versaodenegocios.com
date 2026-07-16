@@ -33,7 +33,7 @@ export async function POST(
 
   const message = await prisma.customOrderMessage.create({
     data: {
-      orderId: id,
+      customOrderId: id,
       author: 'customer',
       text: body.text,
       attachments: [],

@@ -11,10 +11,10 @@ import { formatDate, formatCurrency } from '@/lib/utils'
 // ── Types ────────────────────────────────────────────────────────────────────
 
 type CustomOrderStatus =
-  | 'received' | 'pending' | 'awaiting_quote' | 'quoted' | 'accepted'
-  | 'in_production' | 'quality_check' | 'ready' | 'delivered' | 'cancelled' | 'rejected'
+  | 'received' | 'analyzing' | 'negotiating' | 'approved' | 'rejected'
+  | 'purchasing' | 'in_transit' | 'delivered' | 'cancelled'
 
-type CustomOrderOrigin = 'local' | 'international' | 'online' | 'marketplace' | 'other'
+type CustomOrderOrigin = 'china' | 'usa' | 'portugal' | 'brazil' | 'other'
 
 interface Message {
   id: string
@@ -53,42 +53,40 @@ interface CustomOrder {
 
 const STATUS_LABELS: Record<CustomOrderStatus, string> = {
   received: 'Recebida',
-  pending: 'Pendente',
-  awaiting_quote: 'Aguarda Orçamento',
-  quoted: 'Orçamento Enviado',
-  accepted: 'Aceite',
-  in_production: 'Em Produção',
-  quality_check: 'Controlo de Qualidade',
-  ready: 'Pronto para Entrega',
+  analyzing: 'Em Análise',
+  negotiating: 'Em Negociação',
+  approved: 'Aprovada',
+  rejected: 'Rejeitada',
+  purchasing: 'Em Compra',
+  in_transit: 'Em Trânsito',
   delivered: 'Entregue',
-  cancelled: 'Cancelado',
+  cancelled: 'Cancelada',
   rejected: 'Rejeitado',
 }
 
 const STATUS_COLOR: Record<CustomOrderStatus, string> = {
   received: 'bg-blue-100 text-blue-700',
-  pending: 'bg-yellow-100 text-yellow-700',
-  awaiting_quote: 'bg-sky-100 text-sky-700',
-  quoted: 'bg-purple-100 text-purple-700',
-  accepted: 'bg-green-100 text-green-700',
-  in_production: 'bg-orange-100 text-orange-700',
-  quality_check: 'bg-pink-100 text-pink-700',
-  ready: 'bg-emerald-100 text-emerald-700',
+  analyzing: 'bg-sky-100 text-sky-700',
+  negotiating: 'bg-purple-100 text-purple-700',
+  approved: 'bg-green-100 text-green-700',
+  rejected: 'bg-red-100 text-red-700',
+  purchasing: 'bg-orange-100 text-orange-700',
+  in_transit: 'bg-amber-100 text-amber-700',
   delivered: 'bg-gray-100 text-gray-600',
   cancelled: 'bg-red-100 text-red-600',
   rejected: 'bg-rose-100 text-rose-700',
 }
 
 const ORIGIN_LABELS: Record<CustomOrderOrigin, string> = {
-  local: '🇦🇴 Produto Local',
-  international: '🌍 Internacional',
-  online: '🌐 Loja Online',
-  marketplace: '🛒 Marketplace',
+  china: '🇨🇳 China',
+  usa: '🇺🇸 Estados Unidos',
+  portugal: '🇵🇹 Portugal',
+  brazil: '🇧🇷 Brasil',
   other: '📦 Outro',
 }
 
 const STATUS_PROGRESS: CustomOrderStatus[] = [
-  'received', 'awaiting_quote', 'quoted', 'accepted', 'in_production', 'quality_check', 'ready', 'delivered',
+  'received', 'analyzing', 'negotiating', 'approved', 'purchasing', 'in_transit', 'delivered',
 ]
 
 const CLOSED_STATUSES: CustomOrderStatus[] = ['delivered', 'cancelled', 'rejected']
@@ -106,8 +104,8 @@ function StatusBadge({ status }: { status: CustomOrderStatus }) {
 function StatusIcon({ status }: { status: CustomOrderStatus }) {
   if (status === 'delivered') return <CheckCircle className="w-5 h-5 text-emerald-500" />
   if (['cancelled', 'rejected'].includes(status)) return <AlertCircle className="w-5 h-5 text-red-500" />
-  if (status === 'ready') return <Truck className="w-5 h-5 text-emerald-500" />
-  if (['in_production', 'quality_check'].includes(status)) return <Package className="w-5 h-5 text-orange-500" />
+  if (status === 'in_transit') return <Truck className="w-5 h-5 text-emerald-500" />
+  if (['purchasing', 'approved'].includes(status)) return <Package className="w-5 h-5 text-orange-500" />
   return <Clock className="w-5 h-5 text-blue-500" />
 }
 
