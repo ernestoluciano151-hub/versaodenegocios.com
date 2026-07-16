@@ -15,7 +15,7 @@ export async function GET(_req: NextRequest) {
   const orders = await prisma.customOrder.findMany({
     where: { customerId: customer.id, deletedAt: null },
     include: {
-      messages: { orderBy: { createdAt: 'desc' }, take: 1 },
+      messages: { orderBy: { createdAt: 'asc' } },
     },
     orderBy: { createdAt: 'desc' },
   })

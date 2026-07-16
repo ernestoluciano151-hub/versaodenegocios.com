@@ -23,7 +23,10 @@ export default function ContaNotificacoesPage() {
 
   async function load() {
     const res = await fetch('/api/conta/notifications')
-    if (res.ok) setNotifications(await res.json())
+    if (res.ok) {
+      const data = await res.json()
+      setNotifications(data.notifications ?? data)
+    }
     setLoading(false)
   }
 
@@ -37,8 +40,7 @@ export default function ContaNotificacoesPage() {
   }
 
   async function markAllRead() {
-    const unread = notifications.filter(n => !n.read)
-    await Promise.all(unread.map(n => fetch(`/api/conta/notifications/${n.id}`, { method: 'PATCH' })))
+    await fetch('/api/conta/notifications', { method: 'PATCH' })
     setNotifications(prev => prev.map(n => ({ ...n, read: true })))
   }
 
