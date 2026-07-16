@@ -8,6 +8,7 @@ import { OrderStatusBadge, PaymentStatusBadge } from '@/components/admin/OrderSt
 import { Badge } from '@/components/ui/badge'
 import { PAYMENT_METHOD_LABELS, ORDER_STATUS_LABELS, type OrderStatus, type PaymentStatus, type PaymentMethodType } from '@/types'
 import { ArrowLeft, RotateCcw, FileText, MessageCircle, MapPin, Truck } from 'lucide-react'
+import { CancelOrderButton } from './CancelOrderButton'
 
 export default async function ContaPedidoDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await getCustomerSession()
@@ -103,12 +104,12 @@ export default async function ContaPedidoDetailPage({ params }: { params: Promis
             <Link href="/produtos" className="flex items-center gap-2 px-4 py-2.5 bg-orange-500 text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors">
               <RotateCcw className="w-4 h-4" /> Voltar a comprar
             </Link>
-            <button className="flex items-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
-              <FileText className="w-4 h-4" /> Download Fatura
-            </button>
             <Link href="/conta/suporte" className="flex items-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
               <MessageCircle className="w-4 h-4" /> Contactar Suporte
             </Link>
+            {['awaiting_confirmation', 'confirmed'].includes(order.status) && (
+              <CancelOrderButton orderId={order.id} createdAt={order.createdAt.toISOString()} />
+            )}
           </div>
         </div>
 

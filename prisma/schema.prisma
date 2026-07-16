@@ -279,6 +279,7 @@ model Customer {
   whatsappMessages    WhatsAppMessage[]
   notes            CustomerNote[]
   fraudFlags       FraudFlag[]
+  reviews          ProductReview[]
   customOrders     CustomOrder[]
 
   @@map("customers")
@@ -404,6 +405,7 @@ model Product {
   orderItems       OrderItem[]
   cartItems        CartItem[]
   wishlists        Wishlist[]
+  reviews          ProductReview[]
   viewHistory      ViewHistory[]
   leads            Lead[]
   inventory        Inventory?
@@ -1282,4 +1284,24 @@ model HeroBanner {
   updatedAt   DateTime @updatedAt
 
   @@map("hero_banners")
+}
+
+model ProductReview {
+  id         String   @id @default(cuid())
+  productId  String
+  customerId String?
+  guestName  String?
+  rating     Int      // 1-5
+  title      String?
+  body       String
+  approved   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  product  Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id])
+
+  @@index([productId])
+  @@index([customerId])
+  @@map("product_reviews")
 }

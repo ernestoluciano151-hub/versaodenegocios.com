@@ -1,13 +1,15 @@
 export const dynamic = 'force-dynamic'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { formatCurrency, calculateDiscount } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { ProductCard } from '@/components/store/ProductCard'
 import { AddToCartSection } from './AddToCartSection'
 import { ProductGallery } from './ProductGallery'
-import { Shield, Truck, Globe, Tag } from 'lucide-react'
+import { Shield, Truck, Globe, Tag, ChevronRight, Home } from 'lucide-react'
+import { ProductReviews } from './ProductReviews'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
@@ -39,6 +41,26 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Breadcrumb */}
+      <nav className="flex items-center gap-1.5 text-sm text-gray-500 mb-6 flex-wrap">
+        <Link href="/" className="flex items-center gap-1 hover:text-orange-500 transition-colors">
+          <Home className="w-3.5 h-3.5" />
+          Início
+        </Link>
+        <ChevronRight className="w-3.5 h-3.5 text-gray-300" />
+        <Link href="/produtos" className="hover:text-orange-500 transition-colors">Produtos</Link>
+        {product.category && (
+          <>
+            <ChevronRight className="w-3.5 h-3.5 text-gray-300" />
+            <Link href={`/categoria/${product.category.slug}`} className="hover:text-orange-500 transition-colors">
+              {product.category.name}
+            </Link>
+          </>
+        )}
+        <ChevronRight className="w-3.5 h-3.5 text-gray-300" />
+        <span className="text-gray-900 font-medium truncate max-w-[200px]">{product.name}</span>
+      </nav>
+
       <div className="lg:grid lg:grid-cols-2 lg:gap-12">
         {/* Images */}
         <div className="mb-8 lg:mb-0 relative">
@@ -136,6 +158,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       </div>
 
       {/* Related */}
+      {/* Reviews */}
+      <ProductReviews slug={slug} />
+
       {related.length > 0 && (
         <div className="mt-12">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Produtos Relacionados</h2>
