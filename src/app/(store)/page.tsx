@@ -69,7 +69,7 @@ function ProductGridSkeleton({ count = 4 }: { count?: number }) {
 }
 
 async function FeaturedSection() {
-  const products = await getFeaturedProducts()
+  const products = await getFeaturedProducts().catch(() => [])
   if (products.length === 0) return null
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -94,7 +94,7 @@ async function FeaturedSection() {
 }
 
 async function NewProductsSection() {
-  const products = await getNewProducts()
+  const products = await getNewProducts().catch(() => [])
   if (products.length === 0) return null
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -118,7 +118,7 @@ async function NewProductsSection() {
 }
 
 async function CategoriesSection() {
-  const categories = await getCategories()
+  const categories = await getCategories().catch(() => [])
   if (categories.length === 0) return null
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -141,7 +141,7 @@ async function CategoriesSection() {
 }
 
 async function SaleSection() {
-  const products = await getSaleProducts()
+  const products = await getSaleProducts().catch(() => [])
   if (products.length === 0) return null
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
