@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { rateLimit } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
+  // Rate limit: 10 subscriptions per IP per hour
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+  const rl = rateLimit(`push-subscribe:${ip}`, 10, 60 * 60_000)
+  if (!rl.allowed) {
+    return NextResponse.json({ error: 'Demasiadas tentativas. Aguarde antes de tentar novamente.' }, { status: 429 })
+  }
+
   const session = await auth()
   const user = session?.user as { id?: string; type?: string } | undefined
   const body = await req.json()

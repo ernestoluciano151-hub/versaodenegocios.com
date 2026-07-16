@@ -1,12 +1,37 @@
-import type { Metadata } from 'next'
-import { MapPin, Phone, Mail, Clock } from 'lucide-react'
+'use client'
 
-export const metadata: Metadata = {
-  title: 'Contacto | VN Commerce',
-  description: 'Entre em contacto com a VN Commerce. Estamos em Luanda, Angola.',
-}
+import { useState } from 'react'
+import { MapPin, Phone, Mail, Clock, CheckCircle2, Loader2 } from 'lucide-react'
 
 export default function ContactoPage() {
+  const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' })
+  const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch('/api/contacto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      if (!res.ok) {
+        const d = await res.json()
+        throw new Error(d.error ?? 'Erro ao enviar mensagem.')
+      }
+      setSuccess(true)
+      setForm({ name: '', email: '', subject: '', message: '' })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro inesperado.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -24,26 +49,10 @@ export default function ContactoPage() {
             <h2 className="text-xl font-semibold text-gray-900">Informações de Contacto</h2>
 
             {[
-              {
-                icon: MapPin,
-                title: 'Morada',
-                lines: ['Luanda, Angola'],
-              },
-              {
-                icon: Phone,
-                title: 'Telefone / WhatsApp',
-                lines: ['+244 923 000 000'],
-              },
-              {
-                icon: Mail,
-                title: 'Email',
-                lines: ['info@versaodenegocios.com'],
-              },
-              {
-                icon: Clock,
-                title: 'Horário de Atendimento',
-                lines: ['Segunda a Sexta: 08h – 18h', 'Sábado: 09h – 13h'],
-              },
+              { icon: MapPin, title: 'Morada', lines: ['Luanda, Angola'] },
+              { icon: Phone, title: 'Telefone / WhatsApp', lines: ['+244 923 000 000'] },
+              { icon: Mail, title: 'Email', lines: ['info@versaodenegocios.com'] },
+              { icon: Clock, title: 'Horário de Atendimento', lines: ['Segunda a Sexta: 08h – 18h', 'Sábado: 09h – 13h'] },
             ].map(({ icon: Icon, title, lines }) => (
               <div key={title} className="flex gap-4">
                 <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -62,58 +71,72 @@ export default function ContactoPage() {
           {/* Message form */}
           <div className="bg-white rounded-2xl border border-gray-200 p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-6">Envie-nos uma Mensagem</h2>
-            <form
-              action="mailto:info@versaodenegocios.com"
-              method="get"
-              encType="text/plain"
-              className="space-y-4"
-            >
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
-                <input
-                  type="text"
-                  name="name"
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                  placeholder="O seu nome"
-                />
+
+            {success ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
+                <CheckCircle2 className="w-12 h-12 text-green-500" />
+                <p className="font-semibold text-gray-900">Mensagem enviada com sucesso!</p>
+                <p className="text-sm text-gray-500">Responderemos o mais breve possível.</p>
+                <button onClick={() => setSuccess(false)} className="text-sm text-orange-500 hover:underline mt-2">
+                  Enviar outra mensagem
+                </button>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                  placeholder="email@exemplo.com"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Assunto</label>
-                <input
-                  type="text"
-                  name="subject"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                  placeholder="Como podemos ajudar?"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Mensagem</label>
-                <textarea
-                  name="body"
-                  rows={4}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
-                  placeholder="Descreva a sua dúvida ou questão..."
-                />
-              </div>
-              <button
-                type="submit"
-                className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium text-sm transition-colors"
-              >
-                Enviar Mensagem
-              </button>
-            </form>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
+                  <input
+                    type="text"
+                    required
+                    value={form.name}
+                    onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    placeholder="O seu nome"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                  <input
+                    type="email"
+                    required
+                    value={form.email}
+                    onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    placeholder="email@exemplo.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Assunto</label>
+                  <input
+                    type="text"
+                    value={form.subject}
+                    onChange={e => setForm(f => ({ ...f, subject: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    placeholder="Como podemos ajudar?"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Mensagem *</label>
+                  <textarea
+                    rows={4}
+                    required
+                    value={form.message}
+                    onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
+                    placeholder="Descreva a sua dúvida ou questão..."
+                  />
+                </div>
+                {error && <p className="text-sm text-red-600">{error}</p>}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2"
+                >
+                  {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Enviar Mensagem
+                </button>
+              </form>
+            )}
           </div>
         </div>
       </div>

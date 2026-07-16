@@ -39,8 +39,28 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const discount = product.salePrice ? calculateDiscount(Number(product.price), Number(product.salePrice)) : 0
   const specs = (product.technicalSpecs as Record<string, string> | null) ?? {}
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://versaodenegocios.com'
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    description: product.description ?? undefined,
+    image: product.images,
+    sku: product.sku,
+    brand: product.brand ? { '@type': 'Brand', name: product.brand } : undefined,
+    offers: {
+      '@type': 'Offer',
+      url: `${siteUrl}/produtos/${product.slug}`,
+      priceCurrency: 'AOA',
+      price: String(Number(product.salePrice ?? product.price)),
+      availability: product.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      seller: { '@type': 'Organization', name: 'VN Commerce' },
+    },
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 text-sm text-gray-500 mb-6 flex-wrap">
         <Link href="/" className="flex items-center gap-1 hover:text-orange-500 transition-colors">

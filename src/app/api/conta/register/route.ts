@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
 
   const { name, email, phone, password } = await req.json()
   if (!name || !email || !password) return NextResponse.json({ error: 'Nome, email e palavra-passe obrigatórios' }, { status: 400 })
-  if (password.length < 6) return NextResponse.json({ error: 'Palavra-passe deve ter pelo menos 6 caracteres' }, { status: 400 })
+  if (password.length < 8) return NextResponse.json({ error: 'Palavra-passe deve ter pelo menos 8 caracteres' }, { status: 400 })
 
   const existing = await prisma.customer.findUnique({ where: { email } })
   if (existing) return NextResponse.json({ error: 'Email já registado' }, { status: 409 })

@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Package, Tag, Users, ShoppingBag, CreditCard,
   Warehouse, Plane, Building2, TrendingUp, Megaphone, FileBarChart,
   Settings, Zap, LifeBuoy, Mail, MessageSquare, Star, UserCheck,
-  BarChart3, X, ClipboardList, Image, ShoppingCart,
+  BarChart3, X, ClipboardList, Image, ShoppingCart, Truck,
 } from 'lucide-react'
 import { useUIStore } from '@/store/ui'
 import { cn } from '@/lib/utils'
@@ -21,6 +21,7 @@ const navItems = [
   { href: '/admin/encomendas-personalizadas', label: 'Enc. Personalizadas', icon: ClipboardList },
   { href: '/admin/pagamentos', label: 'Pagamentos', icon: CreditCard },
   { href: '/admin/stock', label: 'Stock', icon: Warehouse },
+  { href: '/admin/logistica', label: 'Logística', icon: Truck },
   { href: '/admin/importacoes', label: 'Importações', icon: Plane },
   { href: '/admin/fornecedores', label: 'Fornecedores', icon: Building2 },
   { href: '/admin/financeiro', label: 'Financeiro', icon: TrendingUp },

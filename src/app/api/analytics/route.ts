@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { rateLimit } from '@/lib/rate-limit'
 
 // POST — track an event (public, no auth required)
 export async function POST(req: NextRequest) {
+  // Rate limit: 60 events per IP per minute — prevents database flood attacks
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+  const rl = rateLimit(`analytics:${ip}`, 60, 60_000)
+  if (!rl.allowed) {
+    return NextResponse.json({ ok: false }, { status: 429 })
+  }
+
   try {
     const session = await auth()
     const user = session?.user as { id?: string; type?: string } | undefined

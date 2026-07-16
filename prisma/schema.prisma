@@ -255,6 +255,9 @@ model Customer {
   riskScore           Int       @default(0)
   fraudScore          Int       @default(0)
   failedLoginAttempts Int       @default(0)
+  prefEmails          Boolean   @default(true)
+  prefPromos          Boolean   @default(true)
+  prefNotifications   Boolean   @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -429,6 +432,7 @@ model Order {
   notes           String?
   shippingAddress Json
   couponCode      String?
+  trackingNumber  String?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 

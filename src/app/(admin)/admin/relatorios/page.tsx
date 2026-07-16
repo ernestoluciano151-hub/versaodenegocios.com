@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 import { prisma } from '@/lib/prisma'
 import { TopBar } from '@/components/admin/TopBar'
 import { formatCurrency } from '@/lib/utils'
-import { BarChart3, ShoppingBag, Users, Package } from 'lucide-react'
+import { BarChart3, Users, Package, Tag } from 'lucide-react'
 
 export default async function RelatoriosPage() {
   const now = new Date()
@@ -27,10 +27,12 @@ export default async function RelatoriosPage() {
       take: 10,
       select: { id: true, name: true, totalSpent: true, ordersCount: true },
     }),
-    // Revenue by category
-    prisma.orderItem.groupBy({
-      by: ['productId'],
-      _sum: { quantity: true },
+    // Revenue by category — fetch items with product's category, aggregate in memory
+    prisma.orderItem.findMany({
+      select: {
+        price: true, quantity: true,
+        product: { select: { category: { select: { name: true } } } },
+      },
     }),
     // Orders per month
     Promise.all(months.map(m =>
@@ -50,7 +52,21 @@ export default async function RelatoriosPage() {
   })
   const productMap = Object.fromEntries(products.map(p => [p.id, p]))
 
+  // Aggregate category revenue in memory
+  const categoryMap: Record<string, { revenue: number; units: number }> = {}
+  for (const item of categoryRevenue) {
+    const catName = item.product?.category?.name ?? 'Sem categoria'
+    if (!categoryMap[catName]) categoryMap[catName] = { revenue: 0, units: 0 }
+    categoryMap[catName].revenue += Number(item.price) * item.quantity
+    categoryMap[catName].units += item.quantity
+  }
+  const categoryStats = Object.entries(categoryMap)
+    .map(([name, s]) => ({ name, ...s }))
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 8)
+
   const maxRevenue = Math.max(...ordersByMonth.map(m => m.revenue), 1)
+  const maxCatRevenue = Math.max(...categoryStats.map(c => c.revenue), 1)
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -101,7 +117,7 @@ export default async function RelatoriosPage() {
                         <td className="py-3 px-4 text-gray-400 font-mono">{i + 1}</td>
                         <td className="py-3 px-4">
                           <p className="font-medium text-gray-900 truncate max-w-[180px]">{p?.name ?? 'N/A'}</p>
-                          <p className="text-xs text-gray-400">{p?.brand} · {p?.category.name}</p>
+                          <p className="text-xs text-gray-400">{p?.brand ?? '—'} · {p?.category?.name ?? '—'}</p>
                         </td>
                         <td className="py-3 px-4 font-bold text-orange-600">{tp._sum.quantity} un.</td>
                       </tr>
@@ -143,6 +159,33 @@ export default async function RelatoriosPage() {
               {topCustomers.length === 0 && <p className="text-center py-8 text-gray-400 text-sm">Sem dados</p>}
             </div>
           </div>
+        </div>
+
+        {/* Revenue by category */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="flex items-center gap-2 mb-6">
+            <Tag className="w-5 h-5 text-orange-500" />
+            <h2 className="font-semibold text-gray-900">Receita por Categoria</h2>
+          </div>
+          {categoryStats.length === 0 ? (
+            <p className="text-center py-8 text-gray-400 text-sm">Sem dados</p>
+          ) : (
+            <div className="space-y-3">
+              {categoryStats.map((cat) => (
+                <div key={cat.name} className="flex items-center gap-4">
+                  <span className="text-sm text-gray-700 w-36 truncate flex-shrink-0">{cat.name}</span>
+                  <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                    <div
+                      className="bg-orange-500 h-full rounded-full transition-all"
+                      style={{ width: `${(cat.revenue / maxCatRevenue) * 100}%` }}
+                    />
+                  </div>
+                  <span className="text-sm font-semibold text-gray-900 w-28 text-right flex-shrink-0">{formatCurrency(cat.revenue)}</span>
+                  <span className="text-xs text-gray-400 w-16 text-right flex-shrink-0">{cat.units} un.</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

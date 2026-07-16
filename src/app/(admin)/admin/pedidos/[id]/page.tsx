@@ -41,7 +41,7 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
                 <h2 className="font-semibold text-gray-900">Itens do Pedido</h2>
-                <OrderStatusSelect orderId={order.id} currentStatus={order.status as OrderStatus} />
+                <OrderStatusSelect orderId={order.id} currentStatus={order.status as OrderStatus} currentTrackingNumber={(order as { trackingNumber?: string | null }).trackingNumber} />
               </div>
               <div className="divide-y divide-gray-100">
                 {order.items.map((item) => (
@@ -155,7 +155,25 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
             {/* Delivery */}
             <div className="bg-white rounded-xl border border-gray-200 p-4">
               <h3 className="text-sm font-semibold text-gray-700 mb-3">Entrega</h3>
-              <pre className="text-sm text-gray-600 whitespace-pre-wrap">{JSON.stringify(order.shippingAddress, null, 2)}</pre>
+              {(() => {
+                const addr = order.shippingAddress as { name?: string; email?: string; phone?: string; street?: string; city?: string; province?: string; country?: string } | null
+                return addr ? (
+                  <div className="space-y-1 text-sm text-gray-600">
+                    {addr.name && <p className="font-medium text-gray-900">{addr.name}</p>}
+                    {addr.street && <p>{addr.street}</p>}
+                    {(addr.city || addr.province) && <p>{[addr.city, addr.province].filter(Boolean).join(', ')}</p>}
+                    {addr.country && <p className="text-gray-400">{addr.country}</p>}
+                    {addr.phone && <p className="text-gray-500 text-xs mt-1">{addr.phone}</p>}
+                    {addr.email && <p className="text-gray-500 text-xs">{addr.email}</p>}
+                  </div>
+                ) : <p className="text-sm text-gray-400">—</p>
+              })()}
+              {(order as { trackingNumber?: string | null }).trackingNumber && (
+                <div className="mt-2 pt-2 border-t border-gray-100">
+                  <p className="text-xs text-gray-400 mb-1">Número de Rastreio</p>
+                  <p className="text-sm font-mono text-orange-600">{(order as { trackingNumber?: string | null }).trackingNumber}</p>
+                </div>
+              )}
               {order.notes && (
                 <div className="mt-2 pt-2 border-t border-gray-100">
                   <p className="text-xs text-gray-400 mb-1">Notas</p>

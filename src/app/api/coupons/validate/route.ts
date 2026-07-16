@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { rateLimit } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+  const rl = rateLimit(`coupon:${ip}`, 10, 60_000)
+  if (!rl.allowed) {
+    return NextResponse.json({ error: 'Demasiadas tentativas. Tente novamente em breve.' }, { status: 429 })
+  }
+
   const { code, subtotal } = await req.json()
 
   if (!code) return NextResponse.json({ error: 'Código obrigatório' }, { status: 400 })

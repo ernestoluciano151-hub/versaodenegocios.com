@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch'
 interface Profile {
   id: string; name: string; email: string; phone: string | null
   avatar: string | null; nif: string | null; createdAt: string
+  prefEmails: boolean; prefPromos: boolean; prefNotifications: boolean
 }
 
 export default function ContaPerfilPage() {
@@ -22,6 +23,7 @@ export default function ContaPerfilPage() {
   const [pw, setPw] = useState({ current: '', new: '', confirm: '' })
   const [showPw, setShowPw] = useState(false)
   const [prefs, setPrefs] = useState({ emails: true, promos: true, notifications: true })
+  const [savingPrefs, setSavingPrefs] = useState(false)
 
   async function load() {
     const res = await fetch('/api/conta/profile')
@@ -29,6 +31,7 @@ export default function ContaPerfilPage() {
       const data: Profile = await res.json()
       setProfile(data)
       setForm({ name: data.name, phone: data.phone ?? '', nif: data.nif ?? '' })
+      setPrefs({ emails: data.prefEmails, promos: data.prefPromos, notifications: data.prefNotifications })
     }
     setLoading(false)
   }
@@ -160,10 +163,10 @@ export default function ContaPerfilPage() {
         </h2>
         <div className="space-y-4">
           {[
-            { key: 'emails', label: 'Receber emails sobre pedidos', desc: 'Confirmações e actualizações de estado' },
-            { key: 'promos', label: 'Receber promoções e ofertas', desc: 'Descontos exclusivos e campanhas' },
-            { key: 'notifications', label: 'Notificações da plataforma', desc: 'Alertas e novidades na conta' },
-          ].map(({ key, label, desc }) => (
+            { key: 'emails', label: 'Receber emails sobre pedidos', desc: 'Confirmações e actualizações de estado', apiKey: 'prefEmails' },
+            { key: 'promos', label: 'Receber promoções e ofertas', desc: 'Descontos exclusivos e campanhas', apiKey: 'prefPromos' },
+            { key: 'notifications', label: 'Notificações da plataforma', desc: 'Alertas e novidades na conta', apiKey: 'prefNotifications' },
+          ].map(({ key, label, desc, apiKey }) => (
             <div key={key} className="flex items-center justify-between py-2">
               <div>
                 <p className="text-sm font-medium text-gray-900">{label}</p>
@@ -171,12 +174,34 @@ export default function ContaPerfilPage() {
               </div>
               <Switch
                 checked={prefs[key as keyof typeof prefs]}
-                onCheckedChange={v => setPrefs(p => ({ ...p, [key]: v }))}
+                disabled={savingPrefs}
+                onCheckedChange={async (v) => {
+                  // Optimistic update
+                  setPrefs(p => ({ ...p, [key]: v }))
+                  setSavingPrefs(true)
+                  try {
+                    const res = await fetch('/api/conta/profile', {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ [apiKey]: v }),
+                    })
+                    if (!res.ok) {
+                      // Rollback on failure
+                      setPrefs(p => ({ ...p, [key]: !v }))
+                      flash('Erro ao guardar preferências.', 'err')
+                    }
+                  } catch {
+                    setPrefs(p => ({ ...p, [key]: !v }))
+                    flash('Erro ao guardar preferências.', 'err')
+                  } finally {
+                    setSavingPrefs(false)
+                  }
+                }}
               />
             </div>
           ))}
         </div>
-        <p className="text-xs text-gray-400 mt-4">As preferências de notificação serão guardadas no próximo início de sessão.</p>
+        {savingPrefs && <p className="text-xs text-orange-500 mt-3 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> A guardar preferências…</p>}
       </div>
     </div>
   )

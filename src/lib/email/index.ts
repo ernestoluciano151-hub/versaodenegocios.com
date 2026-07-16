@@ -74,6 +74,48 @@ export async function sendCartAbandonmentEmail(to: string, data: {
   })
 }
 
+export async function sendContactEmail(to: string, data: {
+  name: string
+  email: string
+  subject?: string
+  message: string
+}) {
+  return getResend().emails.send({
+    from: `${APP_NAME} <${FROM}>`,
+    to,
+    replyTo: data.email,
+    subject: `[Contacto] ${data.subject?.trim() || 'Nova mensagem'} — ${data.name}`,
+    html: `
+      <h2>Nova mensagem de contacto</h2>
+      <p><strong>Nome:</strong> ${data.name}</p>
+      <p><strong>Email:</strong> ${data.email}</p>
+      ${data.subject ? `<p><strong>Assunto:</strong> ${data.subject}</p>` : ''}
+      <hr/>
+      <p>${data.message.replace(/\n/g, '<br/>')}</p>
+    `,
+  })
+}
+
+export async function sendOrderShippedEmail(to: string, data: {
+  customerName: string
+  orderId: string
+  trackingNumber?: string
+}) {
+  return getResend().emails.send({
+    from: `${APP_NAME} <${FROM}>`,
+    to,
+    subject: `Pedido #${data.orderId.slice(-8).toUpperCase()} enviado — ${APP_NAME}`,
+    html: `
+      <h1>O seu pedido foi enviado! 🚚</h1>
+      <p>Olá, ${data.customerName}!</p>
+      <p>O seu pedido <strong>#${data.orderId.slice(-8).toUpperCase()}</strong> foi despachado.</p>
+      ${data.trackingNumber ? `<p>Número de rastreio: <strong>${data.trackingNumber}</strong></p>` : ''}
+      <p>Aguarde a entrega nos próximos dias úteis.</p>
+      <p>Obrigado pela sua compra!</p>
+    `,
+  })
+}
+
 export async function sendAdminNewOrder(data: {
   orderId: string
   customerName: string

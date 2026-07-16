@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -23,10 +23,43 @@ export default function CheckoutPage() {
   const activeItems = items.filter((i) => !i.savedForLater)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<CheckoutFormData>({
+  const { register, handleSubmit, watch, reset, formState: { errors } } = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutFormSchema) as any,
     defaultValues: { paymentMethod: 'cash_on_delivery', country: 'Angola' },
   })
+
+  // Pre-fill from customer profile if logged in
+  useEffect(() => {
+    fetch('/api/conta/profile')
+      .then(r => r.ok ? r.json() : null)
+      .then(profile => {
+        if (!profile) return
+        reset((prev) => ({
+          ...prev,
+          name: profile.name ?? prev.name,
+          email: profile.email ?? prev.email,
+          phone: profile.phone ?? prev.phone,
+        }))
+        // Also try to fetch default address
+        return fetch('/api/conta/addresses')
+      })
+      .then(r => r?.ok ? r.json() : null)
+      .then(addresses => {
+        if (!Array.isArray(addresses) || addresses.length === 0) return
+        const def = addresses.find((a: { isDefault: boolean }) => a.isDefault) ?? addresses[0]
+        if (def) {
+          reset((prev) => ({
+            ...prev,
+            street: def.street ?? prev.street,
+            city: def.city ?? prev.city,
+            province: def.province ?? prev.province,
+            country: def.country ?? prev.country,
+          }))
+        }
+      })
+      .catch(() => { /* not logged in — ignore */ })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const paymentMethod = watch('paymentMethod')
 

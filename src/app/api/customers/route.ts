@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireAdmin } from '@/lib/admin-auth'
 import bcrypt from 'bcryptjs'
 
 export async function GET(req: NextRequest) {
+  const { error } = await requireAdmin()
+  if (error) return NextResponse.json({ error }, { status: 401 })
+
   const { searchParams } = req.nextUrl
   const search = searchParams.get('search')
 
@@ -13,6 +17,10 @@ export async function GET(req: NextRequest) {
         { email: { contains: search, mode: 'insensitive' } },
       ],
     } : undefined,
+    select: {
+      id: true, name: true, email: true, phone: true,
+      totalSpent: true, ordersCount: true, active: true, createdAt: true,
+    },
     orderBy: { createdAt: 'desc' },
     take: 100,
   })
@@ -21,7 +29,11 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const { error } = await requireAdmin()
+  if (error) return NextResponse.json({ error }, { status: 401 })
+
   const { name, email, phone, password } = await req.json()
+  if (!name || !email) return NextResponse.json({ error: 'Nome e email obrigatórios.' }, { status: 400 })
 
   const exists = await prisma.customer.findUnique({ where: { email } })
   if (exists) return NextResponse.json({ error: 'Email já registado.' }, { status: 409 })
