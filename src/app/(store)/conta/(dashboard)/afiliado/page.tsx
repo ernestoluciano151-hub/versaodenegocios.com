@@ -116,8 +116,10 @@ export default function AfiliadoPage() {
   const load = useCallback(async () => {
     try {
       const res = await fetch('/api/conta/affiliate')
+      if (!res.ok) { setAffiliate(null); return }
       const data = await res.json()
-      setAffiliate(data ?? null)
+      // API returns null when no affiliate exists
+      setAffiliate(data && typeof data === 'object' && !data.error ? data : null)
     } catch {
       setAffiliate(null)
     }

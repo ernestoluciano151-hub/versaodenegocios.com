@@ -16,16 +16,20 @@ export async function GET(_req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const affiliate = await prisma.affiliate.findUnique({
-    where: { customerId: customer.id },
-    include: {
-      commissions: { orderBy: { createdAt: 'desc' }, take: 10 },
-      clicks: { orderBy: { createdAt: 'desc' }, take: 5 },
-      links: { where: { active: true } },
-      payoutRequests: { orderBy: { createdAt: 'desc' }, take: 5 },
-      _count: { select: { commissions: true, clicks: true, referrals: true } },
-    },
-  })
+  let affiliate
+  try {
+    affiliate = await prisma.affiliate.findUnique({
+      where: { customerId: customer.id },
+      include: {
+        commissions: { orderBy: { createdAt: 'desc' }, take: 10 },
+        links: { where: { active: true } },
+        payoutRequests: { orderBy: { createdAt: 'desc' }, take: 5 },
+      },
+    })
+  } catch (err) {
+    console.error('Affiliate GET error:', err)
+    return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
+  }
 
   if (!affiliate) {
     return NextResponse.json(null)
@@ -36,7 +40,12 @@ export async function GET(_req: NextRequest) {
       ? ((affiliate.totalSales / affiliate.totalClicks) * 100).toFixed(1)
       : '0'
 
-  return NextResponse.json({ ...affiliate, conversionRate })
+  return NextResponse.json({
+    ...affiliate,
+    conversionRate,
+    clicks: [],
+    _count: { commissions: affiliate.commissions.length, clicks: affiliate.totalClicks, referrals: affiliate.totalSales },
+  })
 }
 
 export async function POST(_req: NextRequest) {
