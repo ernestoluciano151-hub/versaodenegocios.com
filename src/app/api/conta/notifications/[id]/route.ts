@@ -1,15 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireCustomerSession } from '@/lib/customer-auth'
 import { prisma } from '@/lib/prisma'
-import { getCustomerSession } from '@/lib/customer-auth'
 
-export async function PATCH(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getCustomerSession()
-  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+export const dynamic = 'force-dynamic'
+
+export async function PATCH(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  let customer
+  try { customer = await requireCustomerSession() } catch {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
   const { id } = await params
-  // Only mark as read if belongs to this customer
-  await prisma.notification.updateMany({
-    where: { id, customerId: session.id },
+  const notification = await prisma.notification.updateMany({
+    where: { id, customerId: customer.id },
     data: { read: true },
   })
-  return NextResponse.json({ success: true })
+  return NextResponse.json({ ok: true, updated: notification.count })
 }

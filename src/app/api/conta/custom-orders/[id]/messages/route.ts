@@ -46,7 +46,7 @@ export async function POST(
       type: 'custom_order_customer_message',
       title: 'Nova mensagem do cliente',
       message: `O cliente ${customer.name} enviou uma mensagem na encomenda ${order.reference}.`,
-      data: { orderId: id, customerId: customer.id },
+      data: { orderId: id, customerId: customer.id, route: `/admin/encomendas-personalizadas/${id}` },
     },
   })
 

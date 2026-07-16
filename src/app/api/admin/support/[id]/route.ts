@@ -20,6 +20,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         type: 'support_reply',
         title: 'Resposta ao seu pedido de suporte',
         message: `A equipa respondeu ao ticket: "${ticket.subject}"`,
+        data: { ticketId: id, route: '/conta/suporte' },
       },
     })
   }

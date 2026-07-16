@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import { useState, useEffect, useRef } from 'react'
 import {
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { getInitials } from '@/lib/utils'
 import { useUIStore } from '@/store/ui'
+import { getCustomerRoute, NotificationData } from '@/lib/notification-routes'
 
 const navItems = [
   { href: '/conta', label: 'Painel', icon: LayoutDashboard, exact: true },
@@ -30,12 +31,14 @@ interface Props {
 
 export function CustomerSidebar({ customer }: Props) {
   const pathname = usePathname()
+  const router = useRouter()
   const { openMobileMenu } = useUIStore()
   const [unreadCount, setUnreadCount] = useState(0)
   const [bellOpen, setBellOpen] = useState(false)
-  const [notifications, setNotifications] = useState<{ id: string; title: string; message: string; read: boolean; createdAt: string }[]>([])
+  const [notifications, setNotifications] = useState<{ id: string; type: string; title: string; message: string; read: boolean; createdAt: string; data?: Record<string, unknown> | null }[]>([])
   const bellRef = useRef<HTMLDivElement>(null)
 
+  // Polling fallback every 30s
   useEffect(() => {
     async function fetchNotifs() {
       try {
@@ -50,6 +53,36 @@ export function CustomerSidebar({ customer }: Props) {
     fetchNotifs()
     const interval = setInterval(fetchNotifs, 30_000)
     return () => clearInterval(interval)
+  }, [])
+
+  // SSE connection
+  useEffect(() => {
+    let es: EventSource | null = null
+    let retries = 0
+    function connect() {
+      es = new EventSource('/api/conta/notifications/stream')
+      es.onmessage = (e) => {
+        const msg = JSON.parse(e.data)
+        if (msg.type === 'notifications') {
+          setNotifications(prev => {
+            const newIds = new Set(msg.notifications.map((n: { id: string }) => n.id))
+            const merged = [...msg.notifications, ...prev.filter(p => !newIds.has(p.id))]
+            return merged.slice(0, 5)
+          })
+          setUnreadCount(msg.unreadCount)
+        } else if (msg.type === 'heartbeat') {
+          setUnreadCount(msg.unreadCount)
+        }
+        retries = 0
+      }
+      es.onerror = () => {
+        es?.close()
+        retries++
+        if (retries < 3) setTimeout(connect, Math.min(30000, 5000 * retries))
+      }
+    }
+    connect()
+    return () => es?.close()
   }, [])
 
   // Close bell dropdown on outside click
@@ -68,6 +101,17 @@ export function CustomerSidebar({ customer }: Props) {
     setUnreadCount(0)
     setNotifications(prev => prev.map(n => ({ ...n, read: true })))
     setBellOpen(false)
+  }
+
+  async function handleNotifClick(n: { id: string; type: string; data?: Record<string, unknown> | null; read: boolean }) {
+    if (!n.read) {
+      await fetch(`/api/conta/notifications/${n.id}`, { method: 'PATCH' })
+      setUnreadCount(prev => Math.max(0, prev - 1))
+      setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x))
+    }
+    setBellOpen(false)
+    const route = getCustomerRoute(n.type, n.data as NotificationData)
+    if (route) router.push(route)
   }
 
   function isActive(href: string, exact?: boolean) {
@@ -105,7 +149,7 @@ export function CustomerSidebar({ customer }: Props) {
           </button>
 
           {bellOpen && (
-            <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden">
+            <div className="absolute right-0 top-full mt-2 w-[min(320px,calc(100vw-2rem))] bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                 <span className="font-semibold text-sm text-gray-900">Notificações</span>
                 <div className="flex items-center gap-2">
@@ -127,7 +171,11 @@ export function CustomerSidebar({ customer }: Props) {
               ) : (
                 <ul className="divide-y divide-gray-50 max-h-64 overflow-y-auto">
                   {notifications.map(n => (
-                    <li key={n.id} className={`px-4 py-3 ${!n.read ? 'bg-orange-50' : ''}`}>
+                    <li
+                      key={n.id}
+                      className={`px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors ${!n.read ? 'bg-orange-50' : ''}`}
+                      onClick={() => handleNotifClick(n)}
+                    >
                       <p className={`text-sm font-medium ${!n.read ? 'text-gray-900' : 'text-gray-600'}`}>{n.title}</p>
                       <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{n.message}</p>
                     </li>

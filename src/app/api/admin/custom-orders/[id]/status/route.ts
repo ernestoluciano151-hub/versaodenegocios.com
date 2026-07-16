@@ -89,7 +89,7 @@ export async function PATCH(
       type: 'custom_order_status',
       title: getStatusNotificationTitle(status),
       message: getStatusNotificationMessage(status, order.reference),
-      data: { orderId: id, status },
+      data: { orderId: id, status, route: '/conta/encomendas-personalizadas' },
     },
   })
 

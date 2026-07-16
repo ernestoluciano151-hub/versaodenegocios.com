@@ -1,10 +1,11 @@
 'use client'
 import { useEffect } from 'react'
 import { AlertTriangle } from 'lucide-react'
+import { logError } from '@/lib/logger'
 
 export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
-    console.error(error)
+    logError(error, 'root-error-boundary')
   }, [error])
 
   return (
@@ -15,6 +16,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
         </div>
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Ocorreu um erro</h1>
         <p className="text-gray-500 mb-8">Algo correu mal. Por favor tente novamente.</p>
+        {error.digest && <p className="mt-2 text-xs text-gray-400">Código: {error.digest}</p>}
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <button
             onClick={reset}
