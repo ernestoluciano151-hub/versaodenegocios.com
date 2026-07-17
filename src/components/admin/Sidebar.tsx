@@ -7,7 +7,7 @@ import {
   Warehouse, Plane, Building2, TrendingUp, Megaphone, FileBarChart,
   Settings, ChevronLeft, ChevronRight, LifeBuoy, Mail,
   MessageSquare, Star, UserCheck, BarChart3, ClipboardList,
-  ShoppingCart, Truck,
+  ShoppingCart, Truck, Image,
 } from 'lucide-react'
 import NextImage from 'next/image'
 import { useUIStore } from '@/store/ui'
