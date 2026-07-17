@@ -72,7 +72,7 @@ export default function ContaLoginPage() {
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 mb-6">
             <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
-              <className="w-6 h-6 text-white" />
+              <Image src="/icons/icon-96x96.png" className="w-6 h-6 text-white" alt="VN Commerce" width={24} height={24} />
             </div>
             <span className="text-2xl font-bold text-gray-900">VN Commerce</span>
           </Link>

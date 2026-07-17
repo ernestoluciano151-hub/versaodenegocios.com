@@ -11,7 +11,7 @@ export function Footer() {
           <div>
             <div className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
-                <className="w-5 h-5 text-white" />
+                <Image src="/icons/icon-96x96.png" className="w-5 h-5 text-white" alt="VN Commerce" width={24} height={24} />
               </div>
               <span className="text-xl font-bold text-white">VN Commerce</span>
             </div>
