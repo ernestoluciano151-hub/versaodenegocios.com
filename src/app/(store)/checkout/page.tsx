@@ -84,7 +84,17 @@ export default function CheckoutPage() {
       const result = await res.json()
       if (!res.ok) throw new Error(result.error ?? 'Erro ao processar pedido.')
       clearCart()
-      router.push(`/conta/pedidos/${result.orderId}?novo=1`)
+      // Se a EMIS devolver uma URL de iFrame, redirecionar para a página de pagamento
+      if (result.iframeUrl) {
+        const params = new URLSearchParams({
+          orderId: result.orderId,
+          ref: result.transactionReference ?? '',
+          url: result.iframeUrl,
+        })
+        router.push(`/pagamento/emis?${params.toString()}`)
+      } else {
+        router.push(`/conta/pedidos/${result.orderId}?novo=1`)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro inesperado.')
     } finally {
@@ -168,16 +178,16 @@ export default function CheckoutPage() {
                 </div>
               </label>
 
-              {/* Multicaixa */}
-              <label className="flex items-start gap-3 p-4 rounded-xl border-2 border-gray-200 opacity-50 cursor-not-allowed">
-                <input type="radio" value="multicaixa_express" disabled className="mt-0.5" />
+              {/* Multicaixa Express via EMIS GPO iFrame */}
+              <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${paymentMethod === 'multicaixa_express' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                <input type="radio" value="multicaixa_express" {...register('paymentMethod')} className="mt-0.5 accent-orange-500" />
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs font-bold text-gray-500">MX</span>
+                  <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center flex-shrink-0 border border-orange-200">
+                    <span className="text-xs font-bold text-orange-600">MX</span>
                   </div>
                   <div>
-                    <p className="font-medium text-gray-700">Multicaixa Express</p>
-                    <p className="text-sm text-gray-400">Disponível em breve.</p>
+                    <p className="font-medium text-gray-900">Multicaixa Express</p>
+                    <p className="text-sm text-gray-500">Pague com o seu telemóvel via Multicaixa Express.</p>
                   </div>
                 </div>
               </label>
