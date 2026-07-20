@@ -70,7 +70,7 @@ export const Header = memo(function Header() {
         <div className="flex items-center justify-between h-16 gap-4">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 flex-shrink-0" aria-label="VN Commerce — início">
-            <Image src="/icons/icon-96x96.png" alt="VN Commerce" width={36} height={36} className="rounded-lg flex-shrink-0" priority />
+            <Image src="/logo.svg" alt="VN Commerce" width={36} height={36} className="rounded-lg flex-shrink-0" priority />
             <span className="text-xl font-bold text-gray-900 hidden sm:block">VN Commerce</span>
           </Link>
 

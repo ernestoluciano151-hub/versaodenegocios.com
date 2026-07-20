@@ -15,7 +15,7 @@ export default function SobrePage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="flex justify-center mb-6">
             <div className="w-16 h-16 bg-orange-500 rounded-2xl flex items-center justify-center">
-              <Image src="/icons/icon-96x96.png" className="w-9 h-9 text-white" alt="VN Commerce" width={24} height={24} />
+              <Image src="/logo.svg" className="w-9 h-9 text-white" alt="VN Commerce" width={24} height={24} />
             </div>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold mb-4">Sobre a VN Commerce</h1>

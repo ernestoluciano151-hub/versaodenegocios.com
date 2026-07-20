@@ -54,7 +54,7 @@ export function Sidebar() {
     >
       {/* Logo */}
       <div className="flex items-center gap-2 px-4 h-16 border-b border-gray-800">
-        <NextImage src="/icons/icon-96x96.png" alt="VN Commerce" width={32} height={32} className="rounded-lg flex-shrink-0" />
+        <NextImage src="/logo.svg" alt="VN Commerce" width={32} height={32} className="rounded-lg flex-shrink-0" />
         {sidebarOpen && <span className="font-bold text-white truncate">VN Commerce Admin</span>}
       </div>
 

@@ -40,7 +40,7 @@ export default function AdminLoginPage() {
         <div className="flex justify-center mb-8">
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
-              <Image src="/icons/icon-96x96.png" className="w-6 h-6 text-white" alt="VN Commerce" width={24} height={24} />
+              <Image src="/logo.svg" className="w-6 h-6 text-white" alt="VN Commerce" width={24} height={24} />
             </div>
             <span className="text-2xl font-bold text-white">VN Commerce</span>
           </div>
