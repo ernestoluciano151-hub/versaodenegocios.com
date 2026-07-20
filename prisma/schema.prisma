@@ -1312,3 +1312,4 @@ model ProductReview {
   @@index([productId])
   @@index([customerId])
   @@map("product_reviews")
+}
