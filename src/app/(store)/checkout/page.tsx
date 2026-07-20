@@ -15,8 +15,59 @@ import { checkoutFormSchema, type CheckoutFormData } from '@/lib/validations'
 import Image from 'next/image'
 
 interface BankAccount {
-  id: string; bankName: string; accountHolder: string
+  id: string; bankName: string; accountHolder: string; label?: string
   iban?: string; nib?: string; accountNumber?: string; swift?: string; notes?: string
+}
+
+/** SVG logo para cada banco angolano */
+function BankLogo({ name }: { name: string }) {
+  const upper = (name ?? '').toUpperCase()
+  if (upper.includes('BAI')) return (
+    <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: '#003087' }}>
+      <svg viewBox="0 0 32 32" className="w-8 h-8">
+        <circle cx="16" cy="16" r="16" fill="#003087"/>
+        <rect x="8" y="13" width="4" height="4" rx="0.5" fill="white" opacity="0.9"/>
+        <rect x="8" y="9" width="16" height="3" rx="0.5" fill="white" opacity="0.6"/>
+        <rect x="14" y="13" width="4" height="4" rx="0.5" fill="white" opacity="0.7"/>
+        <rect x="20" y="13" width="4" height="4" rx="0.5" fill="white" opacity="0.9"/>
+        <text x="16" y="25" textAnchor="middle" fill="white" fontSize="6" fontWeight="bold" fontFamily="sans-serif">BAI</text>
+      </svg>
+    </div>
+  )
+  if (upper.includes('BCI')) return (
+    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+      <svg viewBox="0 0 32 32" className="w-8 h-8">
+        <rect width="32" height="32" rx="6" fill="#1B3A4B"/>
+        <rect x="6" y="8" width="7" height="16" rx="1" fill="#E91E8C"/>
+        <rect x="8" y="10" width="3" height="4" rx="0.5" fill="#1B3A4B"/>
+        <rect x="8" y="16" width="3" height="4" rx="0.5" fill="#1B3A4B"/>
+        <text x="22" y="20" textAnchor="middle" fill="white" fontSize="7" fontWeight="bold" fontFamily="sans-serif">BCI</text>
+      </svg>
+    </div>
+  )
+  if (upper.includes('BCS')) return (
+    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#1a1a1a' }}>
+      <svg viewBox="0 0 32 32" className="w-8 h-8">
+        <rect width="32" height="32" rx="6" fill="#1a1a1a"/>
+        <circle cx="16" cy="13" r="7" fill="none" stroke="#C9A84C" strokeWidth="1.5"/>
+        <circle cx="16" cy="13" r="4" fill="none" stroke="#C9A84C" strokeWidth="1"/>
+        <path d="M13 10 Q16 7 19 10 Q16 13 13 10Z" fill="#C9A84C" opacity="0.8"/>
+        <text x="16" y="26" textAnchor="middle" fill="#C9A84C" fontSize="6" fontWeight="bold" fontFamily="sans-serif">BCS</text>
+      </svg>
+    </div>
+  )
+  if (upper.includes('BFA')) return (
+    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#E30613' }}>
+      <span className="text-white text-xs font-bold">BFA</span>
+    </div>
+  )
+  // Genérico
+  const initials = name?.slice(0, 3).toUpperCase() ?? '?'
+  return (
+    <div className="w-8 h-8 rounded-lg bg-gray-700 flex items-center justify-center flex-shrink-0">
+      <span className="text-white text-xs font-bold">{initials}</span>
+    </div>
+  )
 }
 
 function BankCoordinatesModal({ bank, onClose }: { bank: BankAccount; onClose: () => void }) {
@@ -262,8 +313,20 @@ export default function CheckoutPage() {
               <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${paymentMethod === 'multicaixa_express' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'}`}>
                 <input type="radio" value="multicaixa_express" {...register('paymentMethod')} className="mt-0.5 accent-orange-500" />
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center flex-shrink-0 border border-orange-200">
-                    <span className="text-xs font-bold text-orange-600">MX</span>
+                  {/* Multicaixa Express logo */}
+                  <div className="w-10 h-10 rounded-xl flex-shrink-0 overflow-hidden" style={{ background: '#E8540A' }}>
+                    <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+                      <rect width="40" height="40" rx="8" fill="#E8540A"/>
+                      <g transform="translate(20,18) scale(0.9)">
+                        <circle cx="0" cy="0" r="4" fill="white" opacity="0.95"/>
+                        {[0,45,90,135,180,225,270,315].map((angle, i) => (
+                          <ellipse key={i} cx={Math.sin(angle*Math.PI/180)*8} cy={-Math.cos(angle*Math.PI/180)*8} rx="2.5" ry="4.5"
+                            transform={`rotate(${angle},${Math.sin(angle*Math.PI/180)*8},${-Math.cos(angle*Math.PI/180)*8})`}
+                            fill="white" opacity="0.9"/>
+                        ))}
+                      </g>
+                      <text x="20" y="34" textAnchor="middle" fill="#8B1A00" fontSize="6" fontWeight="bold" fontFamily="sans-serif">express</text>
+                    </svg>
                   </div>
                   <div>
                     <p className="font-medium text-gray-900">Multicaixa Express</p>
@@ -276,8 +339,31 @@ export default function CheckoutPage() {
               <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${paymentMethod === 'bank_transfer' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
                 <input type="radio" value="bank_transfer" {...register('paymentMethod')} className="mt-0.5 accent-blue-500" />
                 <div className="flex items-center gap-3 flex-1">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Building2 className="w-5 h-5 text-blue-600" />
+                  {/* Bank Transfer icon */}
+                  <div className="w-10 h-10 rounded-xl flex-shrink-0 overflow-hidden bg-white border border-gray-100">
+                    <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+                      <defs>
+                        <linearGradient id="bankGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#4FC3F7"/>
+                          <stop offset="100%" stopColor="#5C6BC0"/>
+                        </linearGradient>
+                      </defs>
+                      <rect width="40" height="40" rx="8" fill="white"/>
+                      <g fill="url(#bankGrad)" transform="translate(4,4)">
+                        {/* Circle arrows */}
+                        <path d="M16 3 C9 3 3 9 3 16 C3 23 9 29 16 29 C23 29 29 23 29 16 C29 9 23 3 16 3 Z" fill="none" stroke="url(#bankGrad)" strokeWidth="2.5" strokeDasharray="none"/>
+                        {/* Rotate arrows */}
+                        <path d="M16 1 L13 5 L19 5 Z" fill="#4FC3F7"/>
+                        <path d="M16 31 L19 27 L13 27 Z" fill="#5C6BC0"/>
+                        {/* Building */}
+                        <rect x="11" y="17" width="10" height="6" fill="url(#bankGrad)" rx="0.5"/>
+                        <rect x="10" y="15" width="12" height="2" fill="url(#bankGrad)"/>
+                        <polygon points="16,10 10,15 22,15" fill="url(#bankGrad)"/>
+                        <rect x="13" y="18.5" width="1.5" height="4" fill="white" opacity="0.7"/>
+                        <rect x="15.5" y="18.5" width="1.5" height="4" fill="white" opacity="0.7"/>
+                        <rect x="18" y="18.5" width="1.5" height="4" fill="white" opacity="0.7"/>
+                      </g>
+                    </svg>
                   </div>
                   <div className="flex-1">
                     <p className="font-medium text-gray-900">Transferência Bancária</p>
@@ -300,7 +386,10 @@ export default function CheckoutPage() {
                         onClick={() => { setSelectedBank(bank); setShowBankModal(true) }}
                         className="w-full flex items-center justify-between p-3 rounded-xl border border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition-colors text-left"
                       >
-                        <span className="font-medium text-gray-900 text-sm">{bank.label}</span>
+                        <div className="flex items-center gap-3">
+                          <BankLogo name={bank.bankName} />
+                          <span className="font-medium text-gray-900 text-sm">{bank.label ?? bank.bankName}</span>
+                        </div>
                         <span className="text-xs text-blue-600 font-medium">Ver coordenadas →</span>
                       </button>
                     ))
