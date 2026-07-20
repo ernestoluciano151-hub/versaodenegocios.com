@@ -36,6 +36,7 @@ const navItems = [
   { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/admin/fidelizacao', label: 'Fidelização', icon: Star },
   { href: '/admin/afiliados', label: 'Afiliados', icon: UserCheck },
+  { href: '/admin/coordenadas-bancarias', label: 'Coord. Bancárias', icon: CreditCard },
   { href: '/admin/notificacoes', label: 'WhatsApp', icon: MessageSquare },
   { href: '/admin/configuracoes', label: 'Configurações', icon: Settings },
 ]

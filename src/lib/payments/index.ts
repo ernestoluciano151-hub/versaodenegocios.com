@@ -17,9 +17,25 @@ const multicaixaProvider: PaymentGateway = process.env.EMIS_FRAME_TOKEN
   ? new EmisGpoProvider()
   : new MulticaixaExpressProvider()
 
+// Bank Transfer — manual, sem gateway. Cria referência local.
+const bankTransferProvider: PaymentGateway = {
+  name: 'Transferência Bancária',
+  type: 'bank_transfer',
+  async createPayment(intent) {
+    return {
+      success: true,
+      transactionReference: `BT-${intent.orderId}-${Date.now()}`,
+      gatewayResponse: { provider: 'BANK_TRANSFER', note: 'Aguardar comprovativo de transferência' },
+    }
+  },
+  async verifyPayment(ref) { return { success: false, transactionReference: ref } },
+  async cancelPayment(ref) { return { success: true, transactionReference: ref } },
+}
+
 const providers: Partial<Record<PaymentMethodType, PaymentGateway>> = {
   cash_on_delivery: new CashOnDeliveryProvider(),
   multicaixa_express: multicaixaProvider,
+  bank_transfer: bankTransferProvider,
 }
 
 export function getPaymentProvider(method: PaymentMethodType): PaymentGateway {

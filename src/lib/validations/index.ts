@@ -20,7 +20,7 @@ export const checkoutFormSchema = z.object({
   province: z.string().min(2, 'Província inválida'),
   country: z.string().default('Angola'),
   notes: z.string().optional(),
-  paymentMethod: z.enum(['cash_on_delivery', 'multicaixa_express']),
+  paymentMethod: z.enum(['cash_on_delivery', 'multicaixa_express', 'bank_transfer']),
   couponCode: z.string().optional(),
 })
 

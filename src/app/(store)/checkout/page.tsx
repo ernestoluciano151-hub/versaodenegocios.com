@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Truck, CheckCircle, ChevronRight } from 'lucide-react'
+import { Truck, CheckCircle, Building2, X, Copy, Check } from 'lucide-react'
 import { useCartStore } from '@/store/cart'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,10 +14,80 @@ import { formatCurrency } from '@/lib/utils'
 import { checkoutFormSchema, type CheckoutFormData } from '@/lib/validations'
 import Image from 'next/image'
 
+interface BankAccount {
+  id: string; bankName: string; label: string; holder: string
+  iban?: string; nib?: string; account?: string; swift?: string; notes?: string
+}
+
+function BankCoordinatesModal({ bank, onClose }: { bank: BankAccount; onClose: () => void }) {
+  const [copied, setCopied] = useState<string | null>(null)
+  function copy(value: string, key: string) {
+    navigator.clipboard.writeText(value).then(() => {
+      setCopied(key)
+      setTimeout(() => setCopied(null), 2000)
+    })
+  }
+  const fields = [
+    { label: 'Banco', value: bank.label },
+    { label: 'Titular', value: bank.holder },
+    { label: 'IBAN', value: bank.iban },
+    { label: 'NIB', value: bank.nib },
+    { label: 'Nº de Conta', value: bank.account },
+    { label: 'SWIFT / BIC', value: bank.swift },
+  ].filter((f) => f.value)
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md shadow-2xl">
+        <div className="flex items-center justify-between p-5 border-b">
+          <div>
+            <h2 className="font-bold text-gray-900">{bank.label}</h2>
+            <p className="text-sm text-gray-500">Coordenadas bancárias para transferência</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+        <div className="p-5 space-y-3">
+          {fields.map(({ label, value }) => (
+            <div key={label} className="flex items-center justify-between gap-3 p-3 bg-gray-50 rounded-xl">
+              <div className="min-w-0">
+                <p className="text-xs text-gray-500">{label}</p>
+                <p className="text-sm font-medium text-gray-900 font-mono break-all">{value}</p>
+              </div>
+              <button
+                onClick={() => copy(value!, label)}
+                className="flex-shrink-0 p-1.5 rounded-lg hover:bg-gray-200 transition-colors"
+                title="Copiar"
+              >
+                {copied === label
+                  ? <Check className="w-4 h-4 text-green-600" />
+                  : <Copy className="w-4 h-4 text-gray-400" />}
+              </button>
+            </div>
+          ))}
+          {bank.notes && (
+            <p className="text-xs text-amber-700 bg-amber-50 rounded-xl p-3">{bank.notes}</p>
+          )}
+        </div>
+        <div className="px-5 pb-5">
+          <p className="text-xs text-gray-400 text-center">
+            Após a transferência, envie o comprovativo para confirmar o pedido.
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function CheckoutPage() {
   const router = useRouter()
   const { items, getTotals, clearCart, couponCode } = useCartStore()
   const [loading, setLoading] = useState(false)
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([])
+  const [selectedBank, setSelectedBank] = useState<BankAccount | null>(null)
+  const [showBankModal, setShowBankModal] = useState(false)
   const [error, setError] = useState('')
   const totals = getTotals()
   const activeItems = items.filter((i) => !i.savedForLater)
@@ -62,6 +132,16 @@ export default function CheckoutPage() {
   }, [])
 
   const paymentMethod = watch('paymentMethod')
+
+  // Buscar contas bancárias quando Transferência Bancária é seleccionada
+  useEffect(() => {
+    if (paymentMethod === 'bank_transfer' && bankAccounts.length === 0) {
+      fetch('/api/bank-accounts')
+        .then(r => r.ok ? r.json() : [])
+        .then(setBankAccounts)
+        .catch(() => {})
+    }
+  }, [paymentMethod, bankAccounts.length])
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async function onSubmit(data: any) {
@@ -191,6 +271,42 @@ export default function CheckoutPage() {
                   </div>
                 </div>
               </label>
+
+              {/* Transferência Bancária */}
+              <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${paymentMethod === 'bank_transfer' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                <input type="radio" value="bank_transfer" {...register('paymentMethod')} className="mt-0.5 accent-blue-500" />
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Building2 className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900">Transferência Bancária</p>
+                    <p className="text-sm text-gray-500">Transfira para a conta da empresa e envie o comprovativo.</p>
+                  </div>
+                </div>
+              </label>
+
+              {/* Selecção de banco quando Transferência Bancária está activa */}
+              {paymentMethod === 'bank_transfer' && (
+                <div className="ml-2 pl-4 border-l-2 border-blue-200 space-y-2">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Seleccione o banco para ver as coordenadas:</p>
+                  {bankAccounts.length === 0 ? (
+                    <p className="text-sm text-gray-400">A carregar bancos disponíveis...</p>
+                  ) : (
+                    bankAccounts.map((bank) => (
+                      <button
+                        key={bank.id}
+                        type="button"
+                        onClick={() => { setSelectedBank(bank); setShowBankModal(true) }}
+                        className="w-full flex items-center justify-between p-3 rounded-xl border border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition-colors text-left"
+                      >
+                        <span className="font-medium text-gray-900 text-sm">{bank.label}</span>
+                        <span className="text-xs text-blue-600 font-medium">Ver coordenadas →</span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -249,6 +365,11 @@ export default function CheckoutPage() {
           </div>
         </div>
       </form>
+
+      {/* Modal de coordenadas bancárias */}
+      {showBankModal && selectedBank && (
+        <BankCoordinatesModal bank={selectedBank} onClose={() => setShowBankModal(false)} />
+      )}
     </div>
   )
 }
