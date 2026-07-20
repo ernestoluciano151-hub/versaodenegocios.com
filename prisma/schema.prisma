@@ -1312,22 +1312,3 @@ model ProductReview {
   @@index([productId])
   @@index([customerId])
   @@map("product_reviews")
-}
-
-model BankAccount {
-  id        String   @id @default(cuid())
-  bankName  String   // ex: "BCS", "BAI", "BCI"
-  label     String   // nome visível ao cliente, ex: "Banco de Crédito do Sul"
-  holder    String   // titular da conta
-  iban      String?
-  nib       String?
-  account   String?  // número de conta
-  swift     String?
-  notes     String?  // instruções adicionais
-  active    Boolean  @default(true)
-  order     Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("bank_accounts")
-}

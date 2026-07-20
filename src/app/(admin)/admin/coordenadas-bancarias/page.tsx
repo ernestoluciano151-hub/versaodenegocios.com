@@ -7,9 +7,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 interface BankAccount {
-  id: string; bankName: string; label: string; holder: string
-  iban?: string; nib?: string; account?: string; swift?: string; notes?: string
-  active: boolean; order: number
+  id: string; bankName: string; accountHolder: string
+  iban?: string; nib?: string; accountNumber?: string; swift?: string; notes?: string
+  active: boolean; sortOrder: number
 }
 
 const PRESET_BANKS = [
@@ -20,7 +20,7 @@ const PRESET_BANKS = [
   { bankName: 'OUTRO', label: 'Outro Banco' },
 ]
 
-const empty = { bankName: '', label: '', holder: '', iban: '', nib: '', account: '', swift: '', notes: '' }
+const empty = { bankName: '', accountHolder: '', iban: '', nib: '', accountNumber: '', swift: '', notes: '' }
 
 export default function CoordenadasBancariasPage() {
   const [accounts, setAccounts] = useState<BankAccount[]>([])
@@ -41,7 +41,7 @@ export default function CoordenadasBancariasPage() {
   function openNew() { setEditing(null); setForm(empty); setShowForm(true) }
   function openEdit(a: BankAccount) {
     setEditing(a)
-    setForm({ bankName: a.bankName, label: a.label, holder: a.holder, iban: a.iban ?? '', nib: a.nib ?? '', account: a.account ?? '', swift: a.swift ?? '', notes: a.notes ?? '' })
+    setForm({ bankName: a.bankName, accountHolder: a.accountHolder, iban: a.iban ?? '', nib: a.nib ?? '', accountNumber: a.accountNumber ?? '', swift: a.swift ?? '', notes: a.notes ?? '' })
     setShowForm(true)
   }
 
@@ -71,7 +71,7 @@ export default function CoordenadasBancariasPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Coordenadas Bancárias</h1>
-          <p className="text-sm text-gray-500 mt-1">Contas bancárias disponíveis para transferência no checkout</p>
+          <p className="text-sm text-gray-500 mt-1">Contas disponíveis para transferência no checkout</p>
         </div>
         <Button onClick={openNew}><Plus className="w-4 h-4" /> Adicionar Banco</Button>
       </div>
@@ -93,16 +93,15 @@ export default function CoordenadasBancariasPage() {
                   <Building2 className="w-5 h-5 text-blue-600" />
                 </div>
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-semibold text-gray-900">{a.label}</p>
-                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{a.bankName}</span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-semibold text-gray-900">{a.bankName}</p>
                     {!a.active && <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">Inactivo</span>}
                   </div>
-                  <p className="text-sm text-gray-500">Titular: {a.holder}</p>
+                  <p className="text-sm text-gray-500">Titular: {a.accountHolder}</p>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-gray-400 font-mono">
                     {a.iban && <span>IBAN: {a.iban}</span>}
                     {a.nib && <span>NIB: {a.nib}</span>}
-                    {a.account && <span>Conta: {a.account}</span>}
+                    {a.accountNumber && <span>Conta: {a.accountNumber}</span>}
                     {a.swift && <span>SWIFT: {a.swift}</span>}
                   </div>
                 </div>
@@ -123,7 +122,6 @@ export default function CoordenadasBancariasPage() {
         </div>
       )}
 
-      {/* Drawer / Modal de formulário */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="absolute inset-0 bg-black/50" onClick={() => setShowForm(false)} />
@@ -135,33 +133,26 @@ export default function CoordenadasBancariasPage() {
               </button>
             </div>
             <div className="p-5 space-y-4">
-              {/* Preset */}
               {!editing && (
                 <div>
-                  <Label>Banco (preset)</Label>
+                  <Label>Preset</Label>
                   <div className="flex flex-wrap gap-2 mt-2">
                     {PRESET_BANKS.map((b) => (
                       <button key={b.bankName} type="button"
-                        onClick={() => setForm(f => ({ ...f, bankName: b.bankName, label: b.label }))}
-                        className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${form.bankName === b.bankName ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 hover:border-gray-300'}`}
+                        onClick={() => setForm(f => ({ ...f, bankName: b.label }))}
+                        className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${form.bankName === b.label ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 hover:border-gray-300'}`}
                       >{b.bankName}</button>
                     ))}
                   </div>
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Código do Banco *</Label>
-                  <Input className="mt-1" value={form.bankName} onChange={e => setForm(f => ({ ...f, bankName: e.target.value }))} placeholder="ex: BAI" />
-                </div>
-                <div>
-                  <Label>Nome do Banco *</Label>
-                  <Input className="mt-1" value={form.label} onChange={e => setForm(f => ({ ...f, label: e.target.value }))} placeholder="ex: Banco Angolano de Investimentos" />
-                </div>
+              <div>
+                <Label>Nome do Banco *</Label>
+                <Input className="mt-1" value={form.bankName} onChange={e => setForm(f => ({ ...f, bankName: e.target.value }))} placeholder="ex: Banco de Crédito do Sul" />
               </div>
               <div>
                 <Label>Titular da Conta *</Label>
-                <Input className="mt-1" value={form.holder} onChange={e => setForm(f => ({ ...f, holder: e.target.value }))} placeholder="Nome do titular" />
+                <Input className="mt-1" value={form.accountHolder} onChange={e => setForm(f => ({ ...f, accountHolder: e.target.value }))} placeholder="Nome do titular" />
               </div>
               <div>
                 <Label>IBAN</Label>
@@ -174,7 +165,7 @@ export default function CoordenadasBancariasPage() {
                 </div>
                 <div>
                   <Label>Nº de Conta</Label>
-                  <Input className="mt-1 font-mono" value={form.account} onChange={e => setForm(f => ({ ...f, account: e.target.value }))} placeholder="00000000000" />
+                  <Input className="mt-1 font-mono" value={form.accountNumber} onChange={e => setForm(f => ({ ...f, accountNumber: e.target.value }))} placeholder="00000000000" />
                 </div>
               </div>
               <div>
@@ -188,9 +179,7 @@ export default function CoordenadasBancariasPage() {
             </div>
             <div className="p-5 border-t flex gap-3">
               <Button variant="outline" className="flex-1" onClick={() => setShowForm(false)}>Cancelar</Button>
-              <Button className="flex-1" loading={saving} onClick={save}>
-                {editing ? 'Guardar' : 'Adicionar'}
-              </Button>
+              <Button className="flex-1" loading={saving} onClick={save}>{editing ? 'Guardar' : 'Adicionar'}</Button>
             </div>
           </div>
         </div>

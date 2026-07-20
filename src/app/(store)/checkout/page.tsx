@@ -15,8 +15,8 @@ import { checkoutFormSchema, type CheckoutFormData } from '@/lib/validations'
 import Image from 'next/image'
 
 interface BankAccount {
-  id: string; bankName: string; label: string; holder: string
-  iban?: string; nib?: string; account?: string; swift?: string; notes?: string
+  id: string; bankName: string; accountHolder: string
+  iban?: string; nib?: string; accountNumber?: string; swift?: string; notes?: string
 }
 
 function BankCoordinatesModal({ bank, onClose }: { bank: BankAccount; onClose: () => void }) {
@@ -28,11 +28,11 @@ function BankCoordinatesModal({ bank, onClose }: { bank: BankAccount; onClose: (
     })
   }
   const fields = [
-    { label: 'Banco', value: bank.label },
-    { label: 'Titular', value: bank.holder },
+    { label: 'Banco', value: bank.bankName },
+    { label: 'Titular', value: bank.accountHolder },
     { label: 'IBAN', value: bank.iban },
     { label: 'NIB', value: bank.nib },
-    { label: 'Nº de Conta', value: bank.account },
+    { label: 'Nº de Conta', value: bank.accountNumber },
     { label: 'SWIFT / BIC', value: bank.swift },
   ].filter((f) => f.value)
 
