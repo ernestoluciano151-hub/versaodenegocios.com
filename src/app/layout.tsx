@@ -4,7 +4,7 @@ import './globals.css'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://versaodenegocios.com'
 
 export const metadata: Metadata = {
-  title: { default: 'VN Commerce — Produtos Eletrónicos', template: '%s | VN Commerce' },
+  title: { default: 'VN Commerce — Produtos Electrónicos', template: '%s | VN Commerce' },
   description: 'Especialistas em produtos eletrónicos importados. Smartphones, computadores, áudio, TV e muito mais.',
   metadataBase: new URL(APP_URL),
   manifest: '/manifest.json',
