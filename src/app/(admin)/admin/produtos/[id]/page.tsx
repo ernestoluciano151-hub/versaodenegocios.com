@@ -28,7 +28,7 @@ export default async function AdminProductDetailPage({ params }: { params: Promi
 
   if (!product) notFound()
 
-  const categories = await prisma.category.findMany({ where: { active: true }, orderBy: { name: 'asc' } })
+  const categories = await prisma.category.findMany({ orderBy: { name: 'asc' } })
 
   const totalSold = product.orderItems.reduce((sum, i) => sum + i.quantity, 0)
   const totalRevenue = product.orderItems.reduce((sum, i) => sum + Number(i.salePrice ?? i.price) * i.quantity, 0)

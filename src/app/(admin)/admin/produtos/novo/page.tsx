@@ -58,7 +58,7 @@ export default function NovoProdutoPage() {
   const loadCategories = useCallback(async () => {
     if (categoriesLoaded) return
     try {
-      const res = await fetch('/api/categories?limit=100')
+      const res = await fetch('/api/admin/categories?limit=100&status=all')
       const data = await res.json()
       setCategories(data.categories ?? data)
       setCategoriesLoaded(true)
