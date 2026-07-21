@@ -344,7 +344,7 @@ export function ProductsCatalog({ products: initialProducts, total, pages, page,
                   <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase"><SortBtn field="stock" /></th>
                   <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase hidden lg:table-cell">Estado</th>
                   <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase hidden xl:table-cell"><SortBtn field="updatedAt" /></th>
-                  <th className="py-3 px-4 w-16" />
+                  <th className="py-3 px-4 w-24 text-left text-xs font-semibold text-gray-500 uppercase">Acções</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -429,14 +429,14 @@ export function ProductsCatalog({ products: initialProducts, total, pages, page,
                       <td className="py-3 px-4 text-xs text-gray-400 hidden xl:table-cell">{fmtDate(p.updatedAt)}</td>
 
                       <td className="py-3 px-4">
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-1">
                           <Link href={`/admin/produtos/${p.id}`}>
-                            <button className="p-1.5 rounded-lg hover:bg-orange-100 text-gray-500 hover:text-orange-600" title="Editar">
+                            <button className="p-1.5 rounded-lg border border-gray-200 hover:bg-orange-100 hover:border-orange-300 text-gray-500 hover:text-orange-600 transition-colors" title="Editar produto">
                               <Edit className="w-4 h-4" />
                             </button>
                           </Link>
                           <button onClick={e => { e.stopPropagation(); setCtxMenu({ x: e.clientX, y: e.clientY, product: p }) }}
-                            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700">
+                            className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors" title="Mais acções">
                             <MoreVertical className="w-4 h-4" />
                           </button>
                         </div>
