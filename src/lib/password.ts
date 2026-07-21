@@ -5,24 +5,27 @@
  *   - Algoritmo: Argon2id
  *   - Salt: gerado automaticamente pela libraria (16 bytes, único por hash)
  *   - Pepper: HMAC-SHA256(password, PASSWORD_PEPPER) antes do hash
- *   - Parâmetros: memoryCost=19456 (19 MiB), timeCost=2, parallelism=1, hashLength=32
+ *   - Parâmetros: memoryCost=19456 (19 MiB), timeCost=2, parallelism=1, outputLen=32
  *
  * Migração transparente:
  *   - Hashes bcrypt legados ($2b$/$2a$) continuam a funcionar no verify().
  *   - Na próxima autenticação bem-sucedida, o hash é actualizado para Argon2id.
+ *
+ * Usa @node-rs/argon2 — binários pré-compilados para macOS, Linux e Windows.
+ * Sem node-gyp; compatível com Vercel, Railway e Docker.
  */
 
-import argon2 from 'argon2'
+import { hash, verify, needsRehash, Algorithm } from '@node-rs/argon2'
 import bcrypt from 'bcryptjs'
 import { createHmac } from 'crypto'
 
 // ── Parâmetros Argon2id (OWASP mínimo recomendado) ───────────────────────────
-const ARGON2_OPTIONS: argon2.Options & { raw?: false } = {
-  type: argon2.argon2id,
+const ARGON2_OPTIONS = {
+  algorithm: Algorithm.Argon2id,
   memoryCost: 19456,  // 19 MiB
   timeCost: 2,        // 2 iterações
   parallelism: 1,
-  hashLength: 32,     // 32 bytes = 256 bits
+  outputLen: 32,      // 32 bytes = 256 bits
   saltLength: 16,     // 16 bytes = 128 bits
 }
 
@@ -33,7 +36,6 @@ const ARGON2_OPTIONS: argon2.Options & { raw?: false } = {
 function getPepper(): string {
   const pepper = process.env.PASSWORD_PEPPER
   if (!pepper && process.env.NODE_ENV === 'production') {
-    // Log de aviso em produção — não lançar erro para não bloquear auth
     console.warn('[SECURITY] PASSWORD_PEPPER não definido em produção. Configure esta variável de ambiente.')
   }
   return pepper ?? ''
@@ -59,7 +61,7 @@ function applyPepper(password: string): string {
  */
 export async function hashPassword(plainPassword: string): Promise<string> {
   const peppered = applyPepper(plainPassword)
-  return argon2.hash(peppered, ARGON2_OPTIONS)
+  return hash(peppered, ARGON2_OPTIONS)
 }
 
 /**
@@ -83,16 +85,16 @@ export async function verifyPassword(
 
   // Hash Argon2id actual
   const peppered = applyPepper(plainPassword)
-  const valid = await argon2.verify(storedHash, peppered)
+  const valid = await verify(storedHash, peppered, ARGON2_OPTIONS)
 
   // Verificar se os parâmetros precisam de actualização
-  const needsRehash = valid && argon2.needsRehash(storedHash, ARGON2_OPTIONS)
-  return { valid, needsRehash }
+  const rehash = valid && needsRehash(storedHash, ARGON2_OPTIONS)
+  return { valid, needsRehash: rehash }
 }
 
 /**
  * Indica se um hash é bcrypt (legado) — útil para forçar rehash no login.
  */
-export function isLegacyHash(hash: string): boolean {
-  return hash.startsWith('$2b$') || hash.startsWith('$2a$') || hash.startsWith('$2y$')
+export function isLegacyHash(storedHash: string): boolean {
+  return storedHash.startsWith('$2b$') || storedHash.startsWith('$2a$') || storedHash.startsWith('$2y$')
 }
