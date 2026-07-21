@@ -7,8 +7,9 @@ import { TopBar } from '@/components/admin/TopBar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { ArrowLeft, Edit, Package, TrendingUp, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Edit, Package, TrendingUp, AlertTriangle, Layers } from 'lucide-react'
 import { ProductEditForm } from './ProductEditForm'
+import { VariantsTab } from './VariantsTab'
 
 export default async function AdminProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -131,6 +132,14 @@ export default async function AdminProductDetailPage({ params }: { params: Promi
                   ))}
                 </ul>
               )}
+            </div>
+
+            {/* Variants */}
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                <Layers className="w-4 h-4 text-gray-400" /> Variantes
+              </h3>
+              <VariantsTab productId={product.id} />
             </div>
 
             {/* Inventory movements */}

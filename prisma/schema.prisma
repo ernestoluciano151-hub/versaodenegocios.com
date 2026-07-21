@@ -445,6 +445,7 @@ model Product {
   inventory        Inventory?
   inventoryMoves   InventoryMovement[]
   analyticsEvents  AnalyticsEvent[]
+  variants         ProductVariant[]
 
   @@index([active, categoryId])
   @@index([active, featured])
@@ -452,6 +453,34 @@ model Product {
   @@index([condition])
   @@index([supplierId])
   @@map("products")
+}
+
+// ─── Product Variants ────────────────────────────────────────────────────────
+
+model ProductVariant {
+  id            String   @id @default(cuid())
+  productId     String
+  name          String                    // e.g. "Azul / 256 GB"
+  sku           String   @unique
+  barcode       String?
+  price         Decimal  @db.Decimal(12, 2)
+  comparePrice  Decimal? @db.Decimal(12, 2)
+  purchasePrice Decimal? @db.Decimal(12, 2)
+  stock         Int      @default(0)
+  minStock      Int      @default(0)
+  imageUrl      String?
+  weight        Decimal? @db.Decimal(8, 3)
+  position      Int      @default(0)
+  isActive      Boolean  @default(true)
+  attributes    Json     @default("{}")   // { "Cor": "Azul", "Capacidade": "256 GB" }
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([sku])
+  @@map("product_variants")
 }
 
 model Order {
