@@ -1,10 +1,10 @@
 import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import Google from 'next-auth/providers/google'
-import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { authConfig } from '@/auth.config'
 import { rateLimit } from '@/lib/rate-limit'
+import { verifyPassword, hashPassword } from '@/lib/password'
 
 async function findOrCreateCustomer(profile: { email: string; name?: string | null; image?: string | null }) {
   let customer = await prisma.customer.findUnique({ where: { email: profile.email } })
@@ -26,7 +26,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     ...authConfig.callbacks,
     async jwt({ token, user, account }) {
-      // Base behaviour from authConfig
       if (user) {
         token.id = user.id
         token.type = (user as { type?: string }).type ?? 'admin'
@@ -71,14 +70,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         // ── Brute-force protection — IP from server request (cannot be spoofed by client) ──
         const ip = (request as Request | undefined)?.headers?.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
-        const rlIp    = rateLimit(`admin-login:ip:${ip}`,              10, 15 * 60_000)
-        const rlEmail = rateLimit(`admin-login:email:${credentials.email}`, 5, 15 * 60_000)
+        const rlIp    = rateLimit(`admin-login:ip:${ip}`,                   10, 15 * 60_000)
+        const rlEmail = rateLimit(`admin-login:email:${credentials.email}`,  5, 15 * 60_000)
         if (!rlIp.allowed || !rlEmail.allowed) return null
 
         const user = await prisma.user.findUnique({ where: { email: credentials.email as string } })
         if (!user || !user.active) return null
-        const isValid = await bcrypt.compare(credentials.password as string, user.password)
-        if (!isValid) return null
+
+        // Verificação com Argon2id (suporta migração transparente de bcrypt legado)
+        const { valid, needsRehash } = await verifyPassword(credentials.password as string, user.password)
+        if (!valid) return null
+
+        // Migração transparente: re-hash com Argon2id na próxima autenticação bem-sucedida
+        if (needsRehash) {
+          const newHash = await hashPassword(credentials.password as string)
+          await prisma.user.update({ where: { id: user.id }, data: { password: newHash } })
+        }
 
         return { id: user.id, name: user.name, email: user.email, role: user.role, image: user.avatar, type: 'admin' }
       },
@@ -96,14 +103,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         // ── Brute-force protection — IP from server request ──
         const ip = (request as Request | undefined)?.headers?.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
-        const rlIp    = rateLimit(`customer-login:ip:${ip}`,              20, 15 * 60_000)
+        const rlIp    = rateLimit(`customer-login:ip:${ip}`,                   20, 15 * 60_000)
         const rlEmail = rateLimit(`customer-login:email:${credentials.email}`, 10, 15 * 60_000)
         if (!rlIp.allowed || !rlEmail.allowed) return null
 
         const customer = await prisma.customer.findUnique({ where: { email: credentials.email as string } })
         if (!customer || !customer.active || !customer.password) return null
-        const isValid = await bcrypt.compare(credentials.password as string, customer.password)
-        if (!isValid) return null
+
+        // Verificação com Argon2id (suporta migração transparente de bcrypt legado)
+        const { valid, needsRehash } = await verifyPassword(credentials.password as string, customer.password)
+        if (!valid) return null
+
+        // Migração transparente: re-hash com Argon2id na próxima autenticação bem-sucedida
+        if (needsRehash) {
+          const newHash = await hashPassword(credentials.password as string)
+          await prisma.customer.update({ where: { id: customer.id }, data: { password: newHash } })
+        }
 
         return { id: customer.id, name: customer.name, email: customer.email, image: customer.avatar, type: 'customer' }
       },

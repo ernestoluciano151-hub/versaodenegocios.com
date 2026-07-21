@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/admin-auth'
-import bcrypt from 'bcryptjs'
+import { hashPassword } from '@/lib/password'
 
 export async function POST(
   request: NextRequest,
@@ -19,7 +19,7 @@ export async function POST(
       return NextResponse.json({ error: 'Password is required' }, { status: 400 })
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12)
+    const hashedPassword = await hashPassword(password)
 
     const user = await prisma.user.update({
       where: { id },

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import bcrypt from 'bcryptjs'
+import { hashPassword } from '@/lib/password'
 import { rateLimit } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
@@ -17,7 +17,8 @@ export async function POST(req: NextRequest) {
   const existing = await prisma.customer.findUnique({ where: { email } })
   if (existing) return NextResponse.json({ error: 'Email já registado' }, { status: 409 })
 
-  const hashed = await bcrypt.hash(password, 12)
+  // Hash Argon2id com pepper — nunca armazenamos a password em texto puro
+  const hashed = await hashPassword(password)
   const customer = await prisma.customer.create({
     data: { name, email, phone: phone || null, password: hashed },
   })

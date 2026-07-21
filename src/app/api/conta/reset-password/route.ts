@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import bcrypt from 'bcryptjs'
+import { hashPassword } from '@/lib/password'
 import { rateLimit } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Link inválido ou expirado. Solicite um novo.' }, { status: 400 })
   }
 
-  const hashed = await bcrypt.hash(password, 12)
+  const hashed = await hashPassword(password)
 
   await prisma.$transaction([
     prisma.customer.update({

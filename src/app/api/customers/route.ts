@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/admin-auth'
-import bcrypt from 'bcryptjs'
+import { hashPassword } from '@/lib/password'
 
 export async function GET(req: NextRequest) {
   const { error } = await requireAdmin()
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
   const exists = await prisma.customer.findUnique({ where: { email } })
   if (exists) return NextResponse.json({ error: 'Email já registado.' }, { status: 409 })
 
-  const hashedPassword = password ? await bcrypt.hash(password, 12) : undefined
+  const hashedPassword = password ? await hashPassword(password) : undefined
 
   const customer = await prisma.customer.create({
     data: { name, email, phone, password: hashedPassword },

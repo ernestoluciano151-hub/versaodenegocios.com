@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCustomerSession } from '@/lib/customer-auth'
 import { rateLimit } from '@/lib/rate-limit'
-import bcrypt from 'bcryptjs'
+import { verifyPassword, hashPassword } from '@/lib/password'
 
 export async function GET() {
   const session = await getCustomerSession()
@@ -37,9 +37,9 @@ export async function PATCH(req: NextRequest) {
     if (!currentPassword) return NextResponse.json({ error: 'Palavra-passe actual obrigatória' }, { status: 400 })
     const customer = await prisma.customer.findUnique({ where: { id: session.id } })
     if (!customer?.password) return NextResponse.json({ error: 'Sem palavra-passe definida' }, { status: 400 })
-    const valid = await bcrypt.compare(currentPassword, customer.password)
+    const { valid } = await verifyPassword(currentPassword, customer.password)
     if (!valid) return NextResponse.json({ error: 'Palavra-passe actual incorrecta' }, { status: 400 })
-    updateData.password = await bcrypt.hash(newPassword, 12)
+    updateData.password = await hashPassword(newPassword)
   }
 
   const updated = await prisma.customer.update({ where: { id: session.id }, data: updateData })
