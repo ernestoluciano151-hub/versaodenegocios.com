@@ -36,7 +36,7 @@ interface ProductRow {
   createdAt: string
   updatedAt: string
   category: { id: string; name: string }
-  _count: { variants: number; reviews: number }
+  _count: { reviews: number }
 }
 
 interface Stats {
@@ -522,11 +522,6 @@ export default function ProdutosAdminPage() {
                                   {p.name}
                                 </Link>
                                 {p.featured && <Star className="w-3.5 h-3.5 fill-orange-400 text-orange-400 flex-shrink-0" />}
-                                {p._count.variants > 0 && (
-                                  <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
-                                    {p._count.variants}v
-                                  </span>
-                                )}
                               </div>
                               <div className="flex items-center gap-2 mt-0.5">
                                 <span className="text-xs text-gray-400 font-mono">{p.sku}</span>

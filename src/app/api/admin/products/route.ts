@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
       where,
       include: {
         category: { select: { id: true, name: true } },
-        _count:   { select: { variants: true, reviews: true } },
+        _count:   { select: { reviews: true } },
       },
       orderBy,
       skip: (page - 1) * limit,
