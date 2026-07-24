@@ -63,8 +63,30 @@ export async function GET(req: NextRequest) {
     }
   } catch (e) { t3 = { error: String(e) } }
 
-  // ── DB user (se email fornecido) ────────────────────────────────────────────
+  // ── Reset de emergência (protegido pelo secret + param reset=nova_password) ─
   const email = req.nextUrl.searchParams.get('email')
+  const resetPassword = req.nextUrl.searchParams.get('reset')
+  let resetResult: Record<string, unknown> | null = null
+
+  if (email && resetPassword) {
+    if (resetPassword.length < 8) {
+      resetResult = { error: 'Password deve ter pelo menos 8 caracteres' }
+    } else {
+      try {
+        const { hashPassword } = await import('@/lib/password')
+        const hashed = await hashPassword(resetPassword)
+        await prisma.user.update({
+          where: { email },
+          data: { password: hashed, mustChangePassword: false },
+        })
+        resetResult = { success: true, message: `Password de ${email} actualizada com sucesso` }
+      } catch (e) {
+        resetResult = { error: String(e) }
+      }
+    }
+  }
+
+  // ── DB user ──────────────────────────────────────────────────────────────────
   let dbUser: Record<string, unknown> | null = null
   if (email) {
     try {
@@ -99,6 +121,7 @@ export async function GET(req: NextRequest) {
   const hasExpectedCookie = cookieNames.includes(expectedCookie)
 
   return NextResponse.json({
+    ...(resetResult ? { reset: resetResult } : {}),
     test1_auth_no_req: t1,
     test2_auth_with_req: t2,
     test3_getToken: t3,
