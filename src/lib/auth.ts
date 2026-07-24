@@ -31,6 +31,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id
         token.type = (user as { type?: string }).type ?? 'admin'
         token.role = (user as { role?: string }).role
+        token.permissions = (user as { permissions?: unknown }).permissions ?? {}
         token.loginAt = Date.now()
       }
       // OAuth providers — always customer, and ensure we store the DB customer ID
