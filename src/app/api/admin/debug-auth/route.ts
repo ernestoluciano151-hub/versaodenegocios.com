@@ -88,15 +88,34 @@ export async function GET(req: NextRequest) {
     } catch (e) { dbUser = { error: String(e) } }
   }
 
+  // ── Inspecção de cookies recebidos no request ──────────────────────────────
+  const cookieHeader = req.headers.get('cookie') ?? ''
+  const cookieNames = cookieHeader
+    .split(';')
+    .map(c => c.trim().split('=')[0])
+    .filter(Boolean)
+
+  const expectedCookie = isProd ? '__Secure-authjs.session-token' : 'authjs.session-token'
+  const hasExpectedCookie = cookieNames.includes(expectedCookie)
+
   return NextResponse.json({
     test1_auth_no_req: t1,
     test2_auth_with_req: t2,
     test3_getToken: t3,
+    cookies_diagnostic: {
+      cookiesReceived: cookieNames,
+      expectedCookieName: expectedCookie,
+      hasExpectedCookie,
+      requestUrl: req.url,
+      requestHost: req.headers.get('host'),
+      // Se hasExpectedCookie=false → não estás logado neste domínio/URL
+      // Se hasExpectedCookie=true mas test3 falha → problema com secret/salt
+    },
     env: {
       nodeEnv: isProd ? 'production' : 'development',
       hasPepper: !!process.env.PASSWORD_PEPPER,
       hasAuthSecret: !!(process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET),
-      cookieName: isProd ? '__Secure-authjs.session-token' : 'authjs.session-token',
+      cookieName: expectedCookie,
     },
     dbUser,
   })
