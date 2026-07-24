@@ -11,61 +11,69 @@ import {
 import { useUIStore } from '@/store/ui'
 import { cn } from '@/lib/utils'
 import { useEffect } from 'react'
+import { isSuperRole, hasPermission, type PermissionKey, type PermissionMap } from '@/lib/permissions'
 
-const navItems = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/produtos', label: 'Produtos', icon: Package },
-  { href: '/admin/categorias', label: 'Categorias', icon: Tag },
-  { href: '/admin/clientes', label: 'Clientes', icon: Users },
-  { href: '/admin/pedidos', label: 'Pedidos', icon: ShoppingBag },
-  { href: '/admin/encomendas-personalizadas', label: 'Enc. Personalizadas', icon: ClipboardList },
-  { href: '/admin/pagamentos', label: 'Pagamentos', icon: CreditCard },
-  { href: '/admin/stock', label: 'Stock', icon: Warehouse },
-  { href: '/admin/logistica', label: 'Logística', icon: Truck },
-  { href: '/admin/importacoes', label: 'Importações', icon: Plane },
-  { href: '/admin/fornecedores', label: 'Fornecedores', icon: Building2 },
-  { href: '/admin/financeiro', label: 'Financeiro', icon: TrendingUp },
-  { href: '/admin/banners', label: 'Banners', icon: Image },
-  { href: '/admin/carrinhos', label: 'Carrinhos', icon: ShoppingCart },
-  { href: '/admin/avaliacoes', label: 'Avaliações', icon: Star },
-  { href: '/admin/marketing', label: 'Marketing', icon: Megaphone },
-  { href: '/admin/newsletter', label: 'Newsletter', icon: Mail },
-  { href: '/admin/relatorios', label: 'Relatórios', icon: FileBarChart },
-  { href: '/admin/suporte', label: 'Suporte', icon: LifeBuoy },
-  { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/admin/fidelizacao', label: 'Fidelização', icon: Star },
-  { href: '/admin/afiliados', label: 'Afiliados', icon: UserCheck },
-  { href: '/admin/notificacoes', label: 'WhatsApp', icon: MessageSquare },
-  { href: '/admin/configuracoes', label: 'Configurações', icon: Settings },
+type NavItem = {
+  href: string
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+  permission?: PermissionKey
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { href: '/admin',                           label: 'Dashboard',          icon: LayoutDashboard },
+  { href: '/admin/produtos',                  label: 'Produtos',           icon: Package,       permission: 'canEditProducts' },
+  { href: '/admin/categorias',                label: 'Categorias',         icon: Tag,           permission: 'canEditProducts' },
+  { href: '/admin/clientes',                  label: 'Clientes',           icon: Users,         permission: 'canViewCustomers' },
+  { href: '/admin/pedidos',                   label: 'Pedidos',            icon: ShoppingBag,   permission: 'canManageOrders' },
+  { href: '/admin/encomendas-personalizadas', label: 'Enc. Personalizadas',icon: ClipboardList, permission: 'canManageOrders' },
+  { href: '/admin/pagamentos',                label: 'Pagamentos',         icon: CreditCard,    permission: 'canCancelPayments' },
+  { href: '/admin/stock',                     label: 'Stock',              icon: Warehouse,     permission: 'canManageInventory' },
+  { href: '/admin/logistica',                 label: 'Logística',          icon: Truck,         permission: 'canManageOrders' },
+  { href: '/admin/importacoes',               label: 'Importações',        icon: Plane,         permission: 'canManageInventory' },
+  { href: '/admin/fornecedores',              label: 'Fornecedores',       icon: Building2,     permission: 'canManageInventory' },
+  { href: '/admin/financeiro',                label: 'Financeiro',         icon: TrendingUp,    permission: 'canViewFinancial' },
+  { href: '/admin/banners',                   label: 'Banners',            icon: Image,         permission: 'canEditProducts' },
+  { href: '/admin/carrinhos',                 label: 'Carrinhos',          icon: ShoppingCart,  permission: 'canViewCustomers' },
+  { href: '/admin/avaliacoes',                label: 'Avaliações',         icon: Star,          permission: 'canManageOrders' },
+  { href: '/admin/marketing',                 label: 'Marketing',          icon: Megaphone,     permission: 'canEditProducts' },
+  { href: '/admin/newsletter',                label: 'Newsletter',         icon: Mail,          permission: 'canEditProducts' },
+  { href: '/admin/relatorios',                label: 'Relatórios',         icon: FileBarChart,  permission: 'canViewFinancial' },
+  { href: '/admin/suporte',                   label: 'Suporte',            icon: LifeBuoy,      permission: 'canManageOrders' },
+  { href: '/admin/analytics',                 label: 'Analytics',          icon: BarChart3,     permission: 'canViewFinancial' },
+  { href: '/admin/fidelizacao',               label: 'Fidelização',        icon: Star,          permission: 'canManageOrders' },
+  { href: '/admin/afiliados',                 label: 'Afiliados',          icon: UserCheck,     permission: 'canViewFinancial' },
+  { href: '/admin/notificacoes',              label: 'WhatsApp',           icon: MessageSquare, permission: 'canManageOrders' },
+  { href: '/admin/configuracoes',             label: 'Configurações',      icon: Settings,      permission: 'canChangeSettings' },
 ]
 
-export function MobileSidebar() {
+interface Props {
+  role: string
+  permissions: PermissionMap
+}
+
+export function MobileSidebar({ role, permissions }: Props) {
   const pathname = usePathname()
   const { mobileMenuOpen, closeMobileMenu } = useUIStore()
 
-  // Fechar ao navegar
   useEffect(() => { closeMobileMenu() }, [pathname, closeMobileMenu])
 
-  // Bloquear scroll quando aberto
   useEffect(() => {
-    if (mobileMenuOpen) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
+    document.body.style.overflow = mobileMenuOpen ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
   }, [mobileMenuOpen])
+
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    if (!item.permission) return true
+    if (isSuperRole(role)) return true
+    return hasPermission(permissions, item.permission)
+  })
 
   if (!mobileMenuOpen) return null
 
   return (
     <>
-      {/* Overlay */}
-      <div
-        className="fixed inset-0 bg-black/50 z-40 md:hidden"
-        onClick={closeMobileMenu}
-      />
-      {/* Drawer */}
+      <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={closeMobileMenu} />
       <aside className="fixed left-0 top-0 h-full w-64 bg-gray-900 text-gray-300 z-50 flex flex-col md:hidden animate-slide-in">
         <div className="flex items-center justify-between px-4 h-16 border-b border-gray-800">
           <div className="flex items-center gap-2">
@@ -74,17 +82,14 @@ export function MobileSidebar() {
             </div>
             <span className="font-bold text-white">VN Commerce</span>
           </div>
-          <button
-            onClick={closeMobileMenu}
-            className="p-1.5 hover:bg-gray-800 rounded-lg transition-colors"
-          >
+          <button onClick={closeMobileMenu} className="p-1.5 hover:bg-gray-800 rounded-lg transition-colors">
             <X className="w-5 h-5 text-gray-400" />
           </button>
         </div>
 
         <nav className="flex-1 py-4 overflow-y-auto">
           <ul className="space-y-1 px-2">
-            {navItems.map(({ href, label, icon: Icon }) => {
+            {visibleItems.map(({ href, label, icon: Icon }) => {
               const active = href === '/admin' ? pathname === '/admin' : pathname.startsWith(href)
               return (
                 <li key={href}>
