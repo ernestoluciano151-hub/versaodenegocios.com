@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { authConfig } from '@/auth.config'
 import { rateLimit } from '@/lib/rate-limit'
 import { verifyPassword, hashPassword } from '@/lib/password'
-import { loadRolePermissions } from '@/lib/permissions'
+import { loadRolePermissions } from '@/lib/permissions.server'
 
 async function findOrCreateCustomer(profile: { email: string; name?: string | null; image?: string | null }) {
   let customer = await prisma.customer.findUnique({ where: { email: profile.email } })
