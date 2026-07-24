@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requireAdmin, requirePermission } from '@/lib/admin-auth'
 import { hashPassword } from '@/lib/password'
 
 const userSelect = {
@@ -34,7 +34,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const { error } = await requireAdmin()
+  const { error } = await requirePermission('canManageUsers')
   if (error) return error
 
   try {

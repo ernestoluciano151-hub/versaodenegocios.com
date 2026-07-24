@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import {
   LayoutDashboard, Package, Tag, Users, ShoppingBag, CreditCard,
   Warehouse, Plane, Building2, TrendingUp, Megaphone, FileBarChart,
@@ -12,38 +13,60 @@ import {
 import NextImage from 'next/image'
 import { useUIStore } from '@/store/ui'
 import { cn } from '@/lib/utils'
+import { isSuperRole, hasPermission, type PermissionKey, type PermissionMap } from '@/lib/permissions'
 
-const navItems = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/produtos', label: 'Produtos', icon: Package },
-  { href: '/admin/categorias', label: 'Categorias', icon: Tag },
-  { href: '/admin/clientes', label: 'Clientes', icon: Users },
-  { href: '/admin/pedidos', label: 'Pedidos', icon: ShoppingBag },
-  { href: '/admin/pagamentos', label: 'Pagamentos', icon: CreditCard },
-  { href: '/admin/encomendas-personalizadas', label: 'Enc. Custom', icon: ClipboardList },
-  { href: '/admin/stock', label: 'Stock', icon: Warehouse },
-  { href: '/admin/logistica', label: 'Logística', icon: Truck },
-  { href: '/admin/importacoes', label: 'Importações', icon: Plane },
-  { href: '/admin/fornecedores', label: 'Fornecedores', icon: Building2 },
-  { href: '/admin/financeiro', label: 'Financeiro', icon: TrendingUp },
-  { href: '/admin/banners', label: 'Banners', icon: Image },
-  { href: '/admin/carrinhos', label: 'Carrinhos', icon: ShoppingCart },
-  { href: '/admin/avaliacoes', label: 'Avaliações', icon: Star },
-  { href: '/admin/marketing', label: 'Marketing', icon: Megaphone },
-  { href: '/admin/newsletter', label: 'Newsletter', icon: Mail },
-  { href: '/admin/relatorios', label: 'Relatórios', icon: FileBarChart },
-  { href: '/admin/suporte', label: 'Suporte', icon: LifeBuoy },
-  { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/admin/fidelizacao', label: 'Fidelização', icon: Star },
-  { href: '/admin/afiliados', label: 'Afiliados', icon: UserCheck },
-  { href: '/admin/coordenadas-bancarias', label: 'Coord. Bancárias', icon: CreditCard },
-  { href: '/admin/notificacoes', label: 'WhatsApp', icon: MessageSquare },
-  { href: '/admin/configuracoes', label: 'Configurações', icon: Settings },
+// Mapeamento de cada item de nav para a permissão necessária.
+// undefined = sempre visível (Dashboard, Configurações gerais)
+type NavItem = {
+  href: string
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+  permission?: PermissionKey
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { href: '/admin',                          label: 'Dashboard',         icon: LayoutDashboard },
+  { href: '/admin/produtos',                 label: 'Produtos',          icon: Package,       permission: 'canEditProducts' },
+  { href: '/admin/categorias',               label: 'Categorias',        icon: Tag,           permission: 'canEditProducts' },
+  { href: '/admin/clientes',                 label: 'Clientes',          icon: Users,         permission: 'canViewCustomers' },
+  { href: '/admin/pedidos',                  label: 'Pedidos',           icon: ShoppingBag,   permission: 'canManageOrders' },
+  { href: '/admin/pagamentos',               label: 'Pagamentos',        icon: CreditCard,    permission: 'canCancelPayments' },
+  { href: '/admin/encomendas-personalizadas', label: 'Enc. Custom',      icon: ClipboardList, permission: 'canManageOrders' },
+  { href: '/admin/stock',                    label: 'Stock',             icon: Warehouse,     permission: 'canManageInventory' },
+  { href: '/admin/logistica',                label: 'Logística',         icon: Truck,         permission: 'canManageOrders' },
+  { href: '/admin/importacoes',              label: 'Importações',       icon: Plane,         permission: 'canManageInventory' },
+  { href: '/admin/fornecedores',             label: 'Fornecedores',      icon: Building2,     permission: 'canManageInventory' },
+  { href: '/admin/financeiro',               label: 'Financeiro',        icon: TrendingUp,    permission: 'canViewFinancial' },
+  { href: '/admin/banners',                  label: 'Banners',           icon: Image,         permission: 'canEditProducts' },
+  { href: '/admin/carrinhos',                label: 'Carrinhos',         icon: ShoppingCart,  permission: 'canViewCustomers' },
+  { href: '/admin/avaliacoes',               label: 'Avaliações',        icon: Star,          permission: 'canManageOrders' },
+  { href: '/admin/marketing',                label: 'Marketing',         icon: Megaphone,     permission: 'canEditProducts' },
+  { href: '/admin/newsletter',               label: 'Newsletter',        icon: Mail,          permission: 'canEditProducts' },
+  { href: '/admin/relatorios',               label: 'Relatórios',        icon: FileBarChart,  permission: 'canViewFinancial' },
+  { href: '/admin/suporte',                  label: 'Suporte',           icon: LifeBuoy,      permission: 'canManageOrders' },
+  { href: '/admin/analytics',                label: 'Analytics',         icon: BarChart3,     permission: 'canViewFinancial' },
+  { href: '/admin/fidelizacao',              label: 'Fidelização',       icon: Star,          permission: 'canManageOrders' },
+  { href: '/admin/afiliados',                label: 'Afiliados',         icon: UserCheck,     permission: 'canViewFinancial' },
+  { href: '/admin/coordenadas-bancarias',    label: 'Coord. Bancárias',  icon: CreditCard,    permission: 'canChangeSettings' },
+  { href: '/admin/notificacoes',             label: 'WhatsApp',          icon: MessageSquare, permission: 'canManageOrders' },
+  { href: '/admin/configuracoes',            label: 'Configurações',     icon: Settings,      permission: 'canChangeSettings' },
 ]
 
 export function Sidebar() {
   const pathname = usePathname()
   const { sidebarOpen, toggleSidebar } = useUIStore()
+  const { data: session } = useSession()
+
+  const role = (session?.user as { role?: string } | null)?.role ?? ''
+  const permissions = (session?.user as { permissions?: PermissionMap } | null)?.permissions
+
+  // Filtra os itens que o utilizador tem permissão para ver.
+  // SUPER_ADMIN e ADMIN vêem tudo.
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    if (!item.permission) return true           // sem restrição (Dashboard)
+    if (isSuperRole(role)) return true          // super admins vêem tudo
+    return hasPermission(permissions, item.permission)
+  })
 
   return (
     <aside
@@ -61,7 +84,7 @@ export function Sidebar() {
       {/* Nav */}
       <nav className="flex-1 py-4 overflow-y-auto">
         <ul className="space-y-1 px-2">
-          {navItems.map(({ href, label, icon: Icon }) => {
+          {visibleItems.map(({ href, label, icon: Icon }) => {
             const active = href === '/admin' ? pathname === '/admin' : pathname.startsWith(href)
             return (
               <li key={href}>

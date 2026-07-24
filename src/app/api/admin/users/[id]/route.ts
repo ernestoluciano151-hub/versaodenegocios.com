@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requireAdmin, requirePermission } from '@/lib/admin-auth'
 
 const userSelect = {
   id: true,
@@ -45,7 +45,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { error } = await requireAdmin()
+  const { error } = await requirePermission('canManageUsers')
   if (error) return error
 
   try {
@@ -78,7 +78,7 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { error } = await requireAdmin()
+  const { error } = await requirePermission('canManageUsers')
   if (error) return error
 
   try {

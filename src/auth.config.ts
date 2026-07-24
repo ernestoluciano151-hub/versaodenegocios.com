@@ -41,6 +41,7 @@ export const authConfig: NextAuthConfig = {
         token.id = user.id
         token.type = (user as { type?: string }).type ?? 'admin'
         token.role = (user as { role?: string }).role
+        token.permissions = (user as { permissions?: unknown }).permissions ?? {}
         // Stamp login time — used to enforce shorter admin sessions
         token.loginAt = Date.now()
       }
@@ -52,10 +53,11 @@ export const authConfig: NextAuthConfig = {
     },
     async session({ session, token }) {
       if (session.user) {
-        const u = session.user as { id?: string; role?: string; type?: string }
+        const u = session.user as { id?: string; role?: string; type?: string; permissions?: unknown }
         u.id = token.id as string
         u.type = token.type as string
         u.role = token.role as string
+        u.permissions = token.permissions
       }
       return session
     },

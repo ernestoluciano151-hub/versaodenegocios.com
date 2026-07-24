@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requireAdmin, requirePermission } from '@/lib/admin-auth'
 
 // GET /api/admin/products
 // Params: q, categoryId, visibility, condition, stockStatus, page, limit, sort, order
@@ -90,7 +90,7 @@ export async function GET(req: NextRequest) {
 
 // PATCH /api/admin/products — bulk operations
 export async function PATCH(req: NextRequest) {
-  const { error } = await requireAdmin()
+  const { error } = await requirePermission('canEditProducts')
   if (error) return error
 
   try {

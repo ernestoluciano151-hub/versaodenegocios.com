@@ -10,7 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Plus, Edit2, Trash2, Key, Loader2, CheckCircle, AlertCircle, UserCircle } from 'lucide-react'
+import { Plus, Edit2, Trash2, Key, Loader2, CheckCircle, AlertCircle, Eye, EyeOff, Copy, Check } from 'lucide-react'
 
 const ROLES = [
   { value: 'SUPER_ADMIN', label: 'Super Admin' },
@@ -69,6 +69,30 @@ export function UsersTab({ users: initial }: Props) {
   const [newPwd, setNewPwd] = useState('')
   const [loading, setLoading] = useState(false)
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [showPwd, setShowPwd] = useState(false)
+  const [showConfirmPwd, setShowConfirmPwd] = useState(false)
+  const [showResetPwd, setShowResetPwd] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  function copyPassword(pwd: string) {
+    navigator.clipboard.writeText(pwd).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  function passwordStrength(pwd: string): { label: string; color: string; ok: boolean } {
+    if (pwd.length === 0) return { label: '', color: '', ok: false }
+    if (pwd.length < 6) return { label: 'Muito fraca', color: 'text-red-500', ok: false }
+    if (pwd.length < 8) return { label: 'Fraca', color: 'text-orange-500', ok: false }
+    const hasUpper = /[A-Z]/.test(pwd)
+    const hasNumber = /\d/.test(pwd)
+    const hasSpecial = /[^A-Za-z0-9]/.test(pwd)
+    const score = [hasUpper, hasNumber, hasSpecial].filter(Boolean).length
+    if (score === 3) return { label: 'Forte ✓', color: 'text-green-600', ok: true }
+    if (score === 2) return { label: 'Média', color: 'text-yellow-600', ok: true }
+    return { label: 'Fraca', color: 'text-orange-500', ok: false }
+  }
 
   function showToast(type: 'success' | 'error', message: string) {
     setToast({ type, message })
@@ -80,6 +104,7 @@ export function UsersTab({ users: initial }: Props) {
   }
 
   async function handleCreate() {
+    if (form.password.length < 8) return showToast('error', 'A palavra-passe deve ter pelo menos 8 caracteres.')
     if (form.password !== form.confirmPassword) return showToast('error', 'As palavras-passe não coincidem.')
     setLoading(true)
     try {
@@ -259,8 +284,48 @@ export function UsersTab({ users: initial }: Props) {
           <div className="space-y-4 py-2">
             <div><Label>Nome</Label><Input className="mt-1" value={form.name} onChange={(e) => setField('name', e.target.value)} /></div>
             <div><Label>Email</Label><Input className="mt-1" type="email" value={form.email} onChange={(e) => setField('email', e.target.value)} /></div>
-            <div><Label>Palavra-passe</Label><Input className="mt-1" type="password" value={form.password} onChange={(e) => setField('password', e.target.value)} /></div>
-            <div><Label>Confirmar Palavra-passe</Label><Input className="mt-1" type="password" value={form.confirmPassword} onChange={(e) => setField('confirmPassword', e.target.value)} /></div>
+            <div>
+              <Label>Palavra-passe</Label>
+              <div className="relative mt-1">
+                <Input
+                  type={showPwd ? 'text' : 'password'}
+                  value={form.password}
+                  onChange={(e) => setField('password', e.target.value)}
+                  className="pr-20"
+                  placeholder="Mínimo 8 caracteres"
+                />
+                <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-0.5">
+                  <button type="button" onClick={() => setShowPwd((v) => !v)} className="p-1.5 text-gray-400 hover:text-gray-600" tabIndex={-1}>
+                    {showPwd ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                  {form.password && (
+                    <button type="button" onClick={() => copyPassword(form.password)} className="p-1.5 text-gray-400 hover:text-gray-600" tabIndex={-1} title="Copiar password">
+                      {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  )}
+                </div>
+              </div>
+              {form.password && (
+                <p className={`text-xs mt-1 ${passwordStrength(form.password).color}`}>{passwordStrength(form.password).label}</p>
+              )}
+            </div>
+            <div>
+              <Label>Confirmar Palavra-passe</Label>
+              <div className="relative mt-1">
+                <Input
+                  type={showConfirmPwd ? 'text' : 'password'}
+                  value={form.confirmPassword}
+                  onChange={(e) => setField('confirmPassword', e.target.value)}
+                  className="pr-10"
+                />
+                <button type="button" onClick={() => setShowConfirmPwd((v) => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600" tabIndex={-1}>
+                  {showConfirmPwd ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+              {form.confirmPassword && form.password !== form.confirmPassword && (
+                <p className="text-xs mt-1 text-red-500">As palavras-passe não coincidem</p>
+              )}
+            </div>
             <div>
               <Label>Papel</Label>
               <Select value={form.role} onValueChange={(v) => setField('role', v)}>
@@ -278,7 +343,7 @@ export function UsersTab({ users: initial }: Props) {
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setNewOpen(false)}>Cancelar</Button>
-            <Button onClick={handleCreate} disabled={loading} className="bg-orange-500 hover:bg-orange-600 text-white">
+            <Button onClick={handleCreate} disabled={loading || form.password.length < 8 || form.password !== form.confirmPassword} className="bg-orange-500 hover:bg-orange-600 text-white">
               {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}Criar
             </Button>
           </div>
@@ -319,7 +384,7 @@ export function UsersTab({ users: initial }: Props) {
       </Dialog>
 
       {/* Reset Password Dialog */}
-      <Dialog open={pwdOpen} onOpenChange={setPwdOpen}>
+      <Dialog open={pwdOpen} onOpenChange={(open) => { setPwdOpen(open); if (!open) { setShowResetPwd(false); setCopied(false) } }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Redefinir Palavra-passe</DialogTitle>
@@ -327,11 +392,35 @@ export function UsersTab({ users: initial }: Props) {
           <div className="py-2">
             <p className="text-sm text-gray-500 mb-4">Nova palavra-passe para <strong>{selected?.name}</strong></p>
             <Label>Nova Palavra-passe</Label>
-            <Input className="mt-1" type="password" value={newPwd} onChange={(e) => setNewPwd(e.target.value)} />
+            <div className="relative mt-1">
+              <Input
+                type={showResetPwd ? 'text' : 'password'}
+                value={newPwd}
+                onChange={(e) => setNewPwd(e.target.value)}
+                className="pr-20"
+                placeholder="Mínimo 8 caracteres"
+              />
+              <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-0.5">
+                <button type="button" onClick={() => setShowResetPwd((v) => !v)} className="p-1.5 text-gray-400 hover:text-gray-600" tabIndex={-1}>
+                  {showResetPwd ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                </button>
+                {newPwd && (
+                  <button type="button" onClick={() => copyPassword(newPwd)} className="p-1.5 text-gray-400 hover:text-gray-600" tabIndex={-1} title="Copiar para clipboard">
+                    {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                )}
+              </div>
+            </div>
+            {newPwd && (
+              <p className={`text-xs mt-1 ${passwordStrength(newPwd).color}`}>{passwordStrength(newPwd).label}</p>
+            )}
+            {newPwd && newPwd.length < 8 && (
+              <p className="text-xs text-red-500 mt-1">A palavra-passe deve ter pelo menos 8 caracteres</p>
+            )}
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setPwdOpen(false)}>Cancelar</Button>
-            <Button onClick={handleResetPassword} disabled={loading || !newPwd} className="bg-orange-500 hover:bg-orange-600 text-white">
+            <Button onClick={handleResetPassword} disabled={loading || !newPwd || newPwd.length < 8} className="bg-orange-500 hover:bg-orange-600 text-white">
               {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}Redefinir
             </Button>
           </div>

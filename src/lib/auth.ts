@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { authConfig } from '@/auth.config'
 import { rateLimit } from '@/lib/rate-limit'
 import { verifyPassword, hashPassword } from '@/lib/password'
+import { loadRolePermissions } from '@/lib/permissions'
 
 async function findOrCreateCustomer(profile: { email: string; name?: string | null; image?: string | null }) {
   let customer = await prisma.customer.findUnique({ where: { email: profile.email } })
@@ -87,7 +88,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           await prisma.user.update({ where: { id: user.id }, data: { password: newHash } })
         }
 
-        return { id: user.id, name: user.name, email: user.email, role: user.role, image: user.avatar, type: 'admin' }
+        // Carregar permissões do role para incluir no JWT
+        const permissions = await loadRolePermissions(user.role)
+
+        return { id: user.id, name: user.name, email: user.email, role: user.role, image: user.avatar, type: 'admin', permissions }
       },
     }),
 
