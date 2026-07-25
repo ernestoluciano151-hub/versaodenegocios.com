@@ -1,6 +1,12 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
+  // ─── Native/server-only packages — never bundle these ────────────────────────
+  // @node-rs/argon2 and bcryptjs use native bindings (.node files) that break
+  // when webpack tries to bundle them. Mark them as external so Node.js loads
+  // them directly at runtime on the server.
+  serverExternalPackages: ['@node-rs/argon2', 'bcryptjs'],
+
   // ─── TypeScript ──────────────────────────────────────────────────────────────
   typescript: {
     // Prisma 7 enum types cause false positives at build time; validated at runtime

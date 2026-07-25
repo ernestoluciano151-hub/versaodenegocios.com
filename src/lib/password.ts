@@ -87,8 +87,17 @@ export async function verifyPassword(
   const peppered = applyPepper(plainPassword)
   const valid = await verify(storedHash, peppered, ARGON2_OPTIONS)
 
-  // Verificar se os parâmetros precisam de actualização
-  const rehash = valid && needsRehash(storedHash, ARGON2_OPTIONS)
+  // Verificar se os parâmetros precisam de actualização.
+  // Envolto em try-catch: se o módulo nativo não exportar needsRehash
+  // (ex: ambiente de bundle) o login não é bloqueado — rehash simplesmente não ocorre.
+  let rehash = false
+  if (valid) {
+    try {
+      rehash = needsRehash(storedHash, ARGON2_OPTIONS)
+    } catch {
+      rehash = false
+    }
+  }
   return { valid, needsRehash: rehash }
 }
 
