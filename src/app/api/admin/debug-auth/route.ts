@@ -88,6 +88,8 @@ export async function GET(req: NextRequest) {
 
   // ── DB user ──────────────────────────────────────────────────────────────────
   let dbUser: Record<string, unknown> | null = null
+  let verifyResult: Record<string, unknown> | null = null
+
   if (email) {
     try {
       const user = await prisma.user.findUnique({
@@ -106,6 +108,25 @@ export async function GET(req: NextRequest) {
           hashPrefix: user.password?.substring(0, 25) + '…',
           password: undefined,
         }
+
+        // ── Verificação directa da password (bypassa rate limit) ──────────────
+        const verifyPlain = req.nextUrl.searchParams.get('verify')
+        if (verifyPlain && user.password) {
+          try {
+            const { verifyPassword } = await import('@/lib/password')
+            const { valid, needsRehash } = await verifyPassword(verifyPlain, user.password)
+            verifyResult = {
+              passwordTested: verifyPlain,
+              valid,
+              needsRehash,
+              conclusion: valid
+                ? '✅ Password CORRECTA — problema pode ser rate limit ou cookie de sessão'
+                : '❌ Password INCORRECTA — hash não coincide. Re-fazer reset.',
+            }
+          } catch (e) {
+            verifyResult = { error: String(e) }
+          }
+        }
       }
     } catch (e) { dbUser = { error: String(e) } }
   }
@@ -122,6 +143,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     ...(resetResult ? { reset: resetResult } : {}),
+    ...(verifyResult ? { verify: verifyResult } : {}),
     test1_auth_no_req: t1,
     test2_auth_with_req: t2,
     test3_getToken: t3,

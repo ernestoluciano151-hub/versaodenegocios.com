@@ -2,7 +2,8 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { ExternalLink, Menu } from 'lucide-react'
+import { ExternalLink, Menu, LogOut } from 'lucide-react'
+import { signOut } from 'next-auth/react'
 import { useUIStore } from '@/store/ui'
 import { getInitials } from '@/lib/utils'
 import { NotificationPanel } from './NotificationPanel'
@@ -62,6 +63,14 @@ export function TopBar({ title, userName = 'Admin', userEmail, actions }: TopBar
               <p className="text-xs text-gray-400">{userEmail}</p>
             </div>
           )}
+          <button
+            onClick={() => signOut({ callbackUrl: '/admin/login' })}
+            className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
+            title="Terminar sessão"
+            aria-label="Terminar sessão"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </header>
