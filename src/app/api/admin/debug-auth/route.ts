@@ -131,6 +131,56 @@ export async function GET(req: NextRequest) {
     } catch (e) { dbUser = { error: String(e) } }
   }
 
+  // ── Simulação completa do authorize (bypassa rate limit) ─────────────────────
+  // Usa ?simulate=password para correr os mesmos passos que auth.ts faz no login
+  let simulateResult: Record<string, unknown> | null = null
+  const simulatePassword = req.nextUrl.searchParams.get('simulate')
+  if (email && simulatePassword) {
+    const steps: Record<string, unknown> = {}
+    try {
+      // Passo 1 — buscar user na DB
+      const u = await prisma.user.findUnique({ where: { email } })
+      steps.step1_userFound = !!u
+      steps.step1_active = u?.active ?? null
+
+      if (!u || !u.active) {
+        steps.conclusion = '❌ Bloqueado em step1: user não encontrado ou inactivo'
+      } else {
+        // Passo 2 — verificar password
+        const { verifyPassword } = await import('@/lib/password')
+        const { valid } = await verifyPassword(simulatePassword, u.password)
+        steps.step2_passwordValid = valid
+
+        if (!valid) {
+          steps.conclusion = '❌ Bloqueado em step2: password incorrecta'
+        } else {
+          // Passo 3 — carregar permissões
+          try {
+            const { loadRolePermissions } = await import('@/lib/permissions.server')
+            const perms = await loadRolePermissions(u.role)
+            steps.step3_permissionsLoaded = true
+            steps.step3_permissionKeys = Object.keys(perms)
+          } catch (e3) {
+            steps.step3_permissionsLoaded = false
+            steps.step3_error = String(e3)
+          }
+
+          // Passo 4 — verificar AUTH_URL / NEXTAUTH_URL
+          steps.step4_AUTH_URL = process.env.AUTH_URL ?? '(não definido)'
+          steps.step4_NEXTAUTH_URL = process.env.NEXTAUTH_URL ?? '(não definido)'
+          steps.step4_requestHost = req.headers.get('host')
+
+          steps.conclusion = steps.step3_permissionsLoaded
+            ? '✅ Todos os passos OK — login devia funcionar. Verificar AUTH_URL/NEXTAUTH_URL se ainda falhar.'
+            : '❌ Bloqueado em step3: loadRolePermissions lançou erro'
+        }
+      }
+    } catch (e) {
+      steps.fatalError = String(e)
+    }
+    simulateResult = steps
+  }
+
   // ── Inspecção de cookies recebidos no request ──────────────────────────────
   const cookieHeader = req.headers.get('cookie') ?? ''
   const cookieNames = cookieHeader
@@ -144,6 +194,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     ...(resetResult ? { reset: resetResult } : {}),
     ...(verifyResult ? { verify: verifyResult } : {}),
+    ...(simulateResult ? { simulate_authorize: simulateResult } : {}),
     test1_auth_no_req: t1,
     test2_auth_with_req: t2,
     test3_getToken: t3,
