@@ -4,20 +4,20 @@ import { requireAdmin } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const { error } = await requireAdmin(req)
   if (error) return error
 
-
-  const campaigns = await prisma.campaign.findMany({ orderBy: { createdAt: 'desc'     take: 50,
-  } })
+  const campaigns = await prisma.campaign.findMany({
+    orderBy: { createdAt: 'desc' },
+    take: 50,
+  })
   return NextResponse.json(campaigns)
 }
 
 export async function POST(req: NextRequest) {
   const { error } = await requireAdmin(req)
   if (error) return error
-
 
   const body = await req.json()
   const { name, subject, body: bodyText, scheduledAt, status } = body
