@@ -218,7 +218,16 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Process payment (outside transaction — external call) ─────────────────
-  const provider = getPaymentProvider(paymentMethod)
+  let provider: ReturnType<typeof getPaymentProvider>
+  try {
+    provider = getPaymentProvider(paymentMethod)
+  } catch {
+    await prisma.order.update({ where: { id: order.id }, data: { status: 'cancelled' } })
+    return NextResponse.json(
+      { error: 'Este método de pagamento não está disponível de momento. Escolha outro método.' },
+      { status: 400 },
+    )
+  }
   let paymentResult: { transactionReference: string; gatewayResponse?: unknown; iframeUrl?: string }
   try {
     paymentResult = await provider.createPayment({
@@ -277,11 +286,27 @@ export async function POST(req: NextRequest) {
     ])
   } catch { /* email failure must not block the order */ }
 
+  // Dados de referência Multicaixa (método 'reference')
+  const gw = paymentResult.gatewayResponse as
+    | { entity?: string | null; reference?: string | null; expiresAt?: string | null }
+    | undefined
+
   return NextResponse.json({
     orderId: order.id,
     transactionReference: paymentResult.transactionReference,
     ...(paymentResult.iframeUrl ? { iframeUrl: paymentResult.iframeUrl } : {}),
     // MCX Express via AppyPay: o cliente tem de aprovar o push na app
     ...(paymentMethod === 'multicaixa_express' ? { awaitApproval: true } : {}),
+    // Referência Multicaixa: mostrar entidade + referência ao cliente
+    ...(paymentMethod === 'reference'
+      ? {
+          paymentReference: {
+            entity: gw?.entity ?? null,
+            reference: gw?.reference ?? null,
+            expiresAt: gw?.expiresAt ?? null,
+            amount: total,
+          },
+        }
+      : {}),
   })
 }

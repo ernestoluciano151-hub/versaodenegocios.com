@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
   // Verificação activa na AppyPay enquanto pendente
   if (
     payment.paymentStatus === 'pending' &&
-    payment.paymentMethod === 'multicaixa_express' &&
+    ['multicaixa_express', 'reference'].includes(payment.paymentMethod) &&
     payment.transactionReference
   ) {
     try {

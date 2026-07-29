@@ -3,10 +3,12 @@ import { CashOnDeliveryProvider } from './cash-on-delivery'
 import { MulticaixaExpressProvider } from './multicaixa-express'
 import { EmisGpoProvider } from './emis-gpo'
 import { AppyPayGpoProvider } from './appypay-gpo'
+import { AppyPayRefProvider } from './appypay-ref'
 
 export type PaymentMethodType =
   | 'cash_on_delivery'
   | 'multicaixa_express'
+  | 'reference'
   | 'bank_transfer'
   | 'credit_card'
   | 'paypal'
@@ -39,6 +41,10 @@ const providers: Partial<Record<PaymentMethodType, PaymentGateway>> = {
   cash_on_delivery: new CashOnDeliveryProvider(),
   multicaixa_express: multicaixaProvider,
   bank_transfer: bankTransferProvider,
+  // Pagamento por Referência Multicaixa (AppyPay/EasyPay)
+  ...(process.env.APPYPAY_CLIENT_ID && process.env.APPYPAY_REF_KEY
+    ? { reference: new AppyPayRefProvider() }
+    : {}),
 }
 
 export function getPaymentProvider(method: PaymentMethodType): PaymentGateway {
@@ -47,5 +53,5 @@ export function getPaymentProvider(method: PaymentMethodType): PaymentGateway {
   return provider
 }
 
-export { CashOnDeliveryProvider, MulticaixaExpressProvider, EmisGpoProvider, AppyPayGpoProvider }
+export { CashOnDeliveryProvider, MulticaixaExpressProvider, EmisGpoProvider, AppyPayGpoProvider, AppyPayRefProvider }
 export type { PaymentGateway }

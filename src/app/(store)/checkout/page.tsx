@@ -222,6 +222,18 @@ export default function CheckoutPage() {
           ref: result.transactionReference ?? '',
         })
         router.push(`/pagamento/emis?${params.toString()}`)
+      } else if (result.paymentReference) {
+        // Pagamento por Referência: mostrar entidade + referência
+        const pr = result.paymentReference
+        const params = new URLSearchParams({
+          orderId: result.orderId,
+          ref: result.transactionReference ?? '',
+          entity: pr.entity ?? '',
+          reference: pr.reference ?? '',
+          amount: String(pr.amount ?? ''),
+          ...(pr.expiresAt ? { expiresAt: pr.expiresAt } : {}),
+        })
+        router.push(`/pagamento/referencia?${params.toString()}`)
       } else {
         router.push(`/conta/pedidos/${result.orderId}?novo=1`)
       }
@@ -351,6 +363,25 @@ export default function CheckoutPage() {
                   </p>
                 </div>
               )}
+
+              {/* Pagamento por Referência Multicaixa */}
+              <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${paymentMethod === 'reference' ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                <input type="radio" value="reference" {...register('paymentMethod')} className="mt-0.5 accent-red-500" />
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl flex-shrink-0 overflow-hidden bg-white border border-gray-100 flex items-center justify-center">
+                    <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+                      <rect width="40" height="40" rx="8" fill="#B91C1C"/>
+                      <text x="20" y="17" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold" fontFamily="sans-serif">REF</text>
+                      <rect x="8" y="22" width="24" height="3" rx="1.5" fill="white" opacity="0.85"/>
+                      <rect x="8" y="28" width="16" height="3" rx="1.5" fill="white" opacity="0.6"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Pagamento por Referência</p>
+                    <p className="text-sm text-gray-500">Receba uma referência Multicaixa e pague no ATM, Internet Banking ou MCX Express.</p>
+                  </div>
+                </div>
+              </label>
 
               {/* Transferência Bancária */}
               <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${paymentMethod === 'bank_transfer' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>

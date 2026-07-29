@@ -23,14 +23,14 @@ const AUTH_URL =
   process.env.APPYPAY_AUTH_URL ??
   'https://login.microsoftonline.com/auth.appypay.co.ao/oauth2/token'
 
-const API_BASE = process.env.APPYPAY_API_BASE ?? 'https://gwy-api.appypay.co.ao/v2.0'
+export const API_BASE = process.env.APPYPAY_API_BASE ?? 'https://gwy-api.appypay.co.ao/v2.0'
 
 const PROD_RESOURCE = 'bee57785-7a19-4f1c-9c8d-aa03f2f0e333'
 
 // ── Cache do token OAuth2 (module-scope; sobrevive entre invocações warm) ────
 let cachedToken: { token: string; expiresAt: number } | null = null
 
-async function getAccessToken(): Promise<string> {
+export async function getAccessToken(): Promise<string> {
   if (cachedToken && Date.now() < cachedToken.expiresAt - 60_000) {
     return cachedToken.token
   }

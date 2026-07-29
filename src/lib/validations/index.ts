@@ -27,7 +27,7 @@ const checkoutBaseSchema = z.object({
   province: z.string().min(2, 'Província inválida'),
   country: z.string().default('Angola'),
   notes: z.string().optional(),
-  paymentMethod: z.enum(['cash_on_delivery', 'multicaixa_express', 'bank_transfer']),
+  paymentMethod: z.enum(['cash_on_delivery', 'multicaixa_express', 'reference', 'bank_transfer']),
   /** Nº de telemóvel associado à app Multicaixa Express (obrigatório para multicaixa_express) */
   mcxPhone: z.string().optional(),
   couponCode: z.string().optional(),
