@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     name, email, phone,
     street, city, province, country,
     notes, paymentMethod, couponCode,
-    items, idempotencyKey,
+    mcxPhone, items, idempotencyKey,
   } = parsed.data
 
   // ── Idempotency check (DB-backed — works across all serverless instances) ──
@@ -227,12 +227,16 @@ export async function POST(req: NextRequest) {
       currency: 'AOA',
       customerName: name,
       customerEmail: email,
+      metadata: mcxPhone ? { phoneNumber: mcxPhone } : undefined,
     })
   } catch (err) {
     logError(err, 'checkout:payment')
     // Order created but payment failed — mark as payment_failed
     await prisma.order.update({ where: { id: order.id }, data: { status: 'cancelled' } })
-    return NextResponse.json({ error: 'Falha ao iniciar pagamento. Tente novamente.' }, { status: 502 })
+    const msg = err instanceof Error && err.message.includes('Multicaixa')
+      ? err.message
+      : 'Falha ao iniciar pagamento. Tente novamente.'
+    return NextResponse.json({ error: msg }, { status: 502 })
   }
 
   await prisma.payment.create({
@@ -277,5 +281,7 @@ export async function POST(req: NextRequest) {
     orderId: order.id,
     transactionReference: paymentResult.transactionReference,
     ...(paymentResult.iframeUrl ? { iframeUrl: paymentResult.iframeUrl } : {}),
+    // MCX Express via AppyPay: o cliente tem de aprovar o push na app
+    ...(paymentMethod === 'multicaixa_express' ? { awaitApproval: true } : {}),
   })
 }

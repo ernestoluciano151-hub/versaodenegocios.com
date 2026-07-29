@@ -10,8 +10,15 @@ export const cartItemSchema = z.object({
   image: z.string().optional(),
 })
 
-/** Used by react-hook-form on the checkout page (form fields only) */
-export const checkoutFormSchema = z.object({
+/** Regra: telemóvel MCX Express obrigatório quando o método é multicaixa_express */
+const mcxPhoneRule = {
+  check: (d: { paymentMethod: string; mcxPhone?: string }) =>
+    d.paymentMethod !== 'multicaixa_express' ||
+    (d.mcxPhone ?? '').replace(/[\s+-]/g, '').replace(/^244/, '').length === 9,
+  params: { message: 'Indique o nº de telemóvel Multicaixa Express (9 dígitos).', path: ['mcxPhone'] },
+}
+
+const checkoutBaseSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
   email: z.string().email('Email inválido'),
   phone: z.string().min(9, 'Telefone inválido'),
@@ -21,14 +28,19 @@ export const checkoutFormSchema = z.object({
   country: z.string().default('Angola'),
   notes: z.string().optional(),
   paymentMethod: z.enum(['cash_on_delivery', 'multicaixa_express', 'bank_transfer']),
+  /** Nº de telemóvel associado à app Multicaixa Express (obrigatório para multicaixa_express) */
+  mcxPhone: z.string().optional(),
   couponCode: z.string().optional(),
 })
 
+/** Used by react-hook-form on the checkout page (form fields only) */
+export const checkoutFormSchema = checkoutBaseSchema.refine(mcxPhoneRule.check, mcxPhoneRule.params)
+
 /** Full schema used by the API route (includes cart items + idempotency key) */
-export const checkoutSchema = checkoutFormSchema.extend({
+export const checkoutSchema = checkoutBaseSchema.extend({
   items: z.array(cartItemSchema).min(1, 'Carrinho vazio'),
   idempotencyKey: z.string().uuid('Chave de idempotência inválida').optional(),
-})
+}).refine(mcxPhoneRule.check, mcxPhoneRule.params)
 
 export const productSchema = z.object({
   name: z.string().min(2, 'Nome obrigatório'),

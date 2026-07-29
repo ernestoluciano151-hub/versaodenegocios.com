@@ -2,6 +2,7 @@ import { PaymentGateway } from './payment-gateway.interface'
 import { CashOnDeliveryProvider } from './cash-on-delivery'
 import { MulticaixaExpressProvider } from './multicaixa-express'
 import { EmisGpoProvider } from './emis-gpo'
+import { AppyPayGpoProvider } from './appypay-gpo'
 
 export type PaymentMethodType =
   | 'cash_on_delivery'
@@ -11,11 +12,13 @@ export type PaymentMethodType =
   | 'paypal'
   | 'stripe'
 
-// Usa EMIS GPO iFrame para Multicaixa Express se EMIS_FRAME_TOKEN estiver configurado,
-// caso contrário usa o stub original (compatível com futuras credenciais directas).
-const multicaixaProvider: PaymentGateway = process.env.EMIS_FRAME_TOKEN
-  ? new EmisGpoProvider()
-  : new MulticaixaExpressProvider()
+// Prioridade: AppyPay/EasyPay GPO (API real) → EMIS iFrame (legado) → stub
+const multicaixaProvider: PaymentGateway =
+  process.env.APPYPAY_CLIENT_ID && process.env.APPYPAY_GPO_KEY
+    ? new AppyPayGpoProvider()
+    : process.env.EMIS_FRAME_TOKEN
+      ? new EmisGpoProvider()
+      : new MulticaixaExpressProvider()
 
 // Bank Transfer — manual, sem gateway. Cria referência local.
 const bankTransferProvider: PaymentGateway = {
@@ -44,5 +47,5 @@ export function getPaymentProvider(method: PaymentMethodType): PaymentGateway {
   return provider
 }
 
-export { CashOnDeliveryProvider, MulticaixaExpressProvider, EmisGpoProvider }
+export { CashOnDeliveryProvider, MulticaixaExpressProvider, EmisGpoProvider, AppyPayGpoProvider }
 export type { PaymentGateway }

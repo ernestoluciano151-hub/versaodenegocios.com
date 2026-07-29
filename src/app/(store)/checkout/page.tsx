@@ -215,12 +215,11 @@ export default function CheckoutPage() {
       const result = await res.json()
       if (!res.ok) throw new Error(result.error ?? 'Erro ao processar pedido.')
       clearCart()
-      // Se a EMIS devolver uma URL de iFrame, redirecionar para a página de pagamento
-      if (result.iframeUrl) {
+      // Multicaixa Express: aguardar aprovação do push na app MCX Express
+      if (result.awaitApproval || result.iframeUrl) {
         const params = new URLSearchParams({
           orderId: result.orderId,
           ref: result.transactionReference ?? '',
-          url: result.iframeUrl,
         })
         router.push(`/pagamento/emis?${params.toString()}`)
       } else {
@@ -334,6 +333,24 @@ export default function CheckoutPage() {
                   </div>
                 </div>
               </label>
+
+              {/* Nº de telemóvel MCX Express */}
+              {paymentMethod === 'multicaixa_express' && (
+                <div className="ml-7 p-4 rounded-xl bg-orange-50 border border-orange-200">
+                  <Label htmlFor="mcxPhone">Nº de telemóvel associado ao Multicaixa Express *</Label>
+                  <Input
+                    id="mcxPhone"
+                    {...register('mcxPhone')}
+                    error={errors.mcxPhone?.message as string | undefined}
+                    className="mt-1 bg-white"
+                    placeholder="9XX XXX XXX"
+                    inputMode="numeric"
+                  />
+                  <p className="text-xs text-orange-700 mt-2">
+                    Vai receber uma notificação na app Multicaixa Express para aprovar o pagamento. Tem cerca de 90 segundos para confirmar.
+                  </p>
+                </div>
+              )}
 
               {/* Transferência Bancária */}
               <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${paymentMethod === 'bank_transfer' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>

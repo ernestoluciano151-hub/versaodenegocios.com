@@ -15,6 +15,11 @@ export const dynamic = 'force-dynamic'
  */
 
 interface EmisWebhookPayload {
+  // AppyPay / EasyPay
+  id?: string
+  merchantTransactionId?: string
+  responseStatus?: { status?: string; message?: string; successful?: boolean }
+  // EMIS legado / genérico
   transactionId?: string
   referenceId?: string
   orderId?: string
@@ -26,11 +31,11 @@ interface EmisWebhookPayload {
   [key: string]: unknown
 }
 
-// Mapa de status EMIS → status interno
-function mapStatus(emisStatus: string): 'pending' | 'paid' | 'failed' | 'cancelled' {
-  const s = emisStatus.toUpperCase()
-  if (['PAID', 'SUCCESS', 'CONFIRMED', 'COMPLETED'].includes(s)) return 'paid'
-  if (['FAILED', 'ERROR'].includes(s)) return 'failed'
+// Mapa de status AppyPay/EMIS → status interno
+function mapStatus(rawStatus: string): 'pending' | 'paid' | 'failed' | 'cancelled' {
+  const s = rawStatus.toUpperCase()
+  if (['PAID', 'SUCCESS', 'SUCCESSFUL', 'ACCEPTED', 'CONFIRMED', 'COMPLETED'].includes(s)) return 'paid'
+  if (['FAILED', 'DECLINED', 'REJECTED', 'ERROR', 'TIMEOUT'].includes(s)) return 'failed'
   if (['CANCELLED', 'CANCELED', 'EXPIRED'].includes(s)) return 'cancelled'
   return 'pending'
 }
@@ -48,20 +53,33 @@ export async function POST(req: NextRequest) {
   // const webhookSecret = process.env.EMIS_WEBHOOK_SECRET
   // if (webhookSecret) { ... verify HMAC ... }
 
+  // AppyPay: merchantTransactionId = orderId nosso; id = chargeId (transactionReference)
   const transactionRef =
-    payload.transactionId ?? payload.referenceId ?? payload.orderId
-  const emisStatus = payload.status ?? payload.paymentStatus ?? 'UNKNOWN'
+    payload.merchantTransactionId ??
+    payload.id ??
+    payload.transactionId ??
+    payload.referenceId ??
+    payload.orderId
+  const rawStatus =
+    payload.responseStatus?.status ?? payload.status ?? payload.paymentStatus ??
+    (payload.responseStatus?.successful === true ? 'SUCCESS' : 'UNKNOWN')
 
   if (!transactionRef) {
     return NextResponse.json({ error: 'transactionId em falta.' }, { status: 400 })
   }
 
-  const internalStatus = mapStatus(emisStatus)
+  const internalStatus = mapStatus(rawStatus)
 
   try {
-    // Encontrar o registo de pagamento pela referência
+    // Encontrar o registo de pagamento pela referência (chargeId) ou pelo orderId
     const payment = await prisma.payment.findFirst({
-      where: { transactionReference: { contains: transactionRef } },
+      where: {
+        OR: [
+          { transactionReference: { contains: transactionRef } },
+          { orderId: transactionRef },
+        ],
+      },
+      orderBy: { createdAt: 'desc' },
       select: { id: true, orderId: true, paymentStatus: true },
     })
 
