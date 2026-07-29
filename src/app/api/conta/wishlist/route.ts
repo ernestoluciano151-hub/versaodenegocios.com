@@ -1,12 +1,15 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getCustomerSession } from '@/lib/customer-auth'
+import { requireCustomer } from '@/lib/customer-auth'
 
-export async function GET() {
-  const session = await getCustomerSession()
-  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+export const dynamic = 'force-dynamic'
+
+export async function GET(req: NextRequest) {
+  const { error: authError, customer: session } = await requireCustomer(req)
+  if (authError) return authError
   const items = await prisma.wishlist.findMany({
-    where: { customerId: session.id },
+    where: { customerId: session.id     take: 100,
+  },
     include: { product: { include: { category: { select: { name: true } } } } },
     orderBy: { createdAt: 'desc' },
   })

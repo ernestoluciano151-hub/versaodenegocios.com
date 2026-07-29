@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getCustomerSession } from '@/lib/customer-auth'
+import { requireCustomer } from '@/lib/customer-auth'
+
+export const dynamic = 'force-dynamic'
 
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ productId: string }> }) {
-  const session = await getCustomerSession()
-  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  const { error: authError, customer: session } = await requireCustomer(req)
+  if (authError) return authError
   const { productId } = await params
   const item = await prisma.wishlist.upsert({
     where: { customerId_productId: { customerId: session.id, productId } },
@@ -15,8 +17,8 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ pr
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ productId: string }> }) {
-  const session = await getCustomerSession()
-  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  const { error: authError, customer: session } = await requireCustomer(req)
+  if (authError) return authError
   const { productId } = await params
   await prisma.wishlist.deleteMany({ where: { customerId: session.id, productId } })
   return NextResponse.json({ success: true })

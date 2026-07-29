@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
@@ -10,8 +9,8 @@ function requireAdmin(session: Awaited<ReturnType<typeof auth>>) {
 
 /** GET /api/admin/carts — listar carrinhos abandonados (com itens) */
 export async function GET(req: NextRequest) {
-  const session = await auth()
-  if (!requireAdmin(session)) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  const { error: _authErr } = await requireAdmin(req)
+  if (_authErr) return _authErr
 
   const { searchParams } = new URL(req.url)
   const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))

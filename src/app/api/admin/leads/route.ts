@@ -1,13 +1,12 @@
-import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireAdmin } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
-  const session = await auth()
-  if ((session?.user as { type?: string })?.type !== 'admin')
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+export async function GET(req: NextRequest) {
+  const { error } = await requireAdmin(req)
+  if (error) return error
 
   const leads = await prisma.lead.findMany({
     include: {

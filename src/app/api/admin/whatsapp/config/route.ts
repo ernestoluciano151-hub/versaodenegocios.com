@@ -1,21 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAdmin } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
-import { auth } from '@/lib/auth'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const session = await auth()
-  if ((session?.user as { type?: string })?.type !== 'admin') {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
+
   const config = await prisma.whatsAppConfig.findFirst()
   return NextResponse.json(config ?? {})
 }
 
 export async function POST(req: NextRequest) {
-  const session = await auth()
-  if ((session?.user as { type?: string })?.type !== 'admin') {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
+
   const body = await req.json()
   const existing = await prisma.whatsAppConfig.findFirst()
   const config = existing

@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getCustomerSession } from '@/lib/customer-auth'
+import { requireCustomer } from '@/lib/customer-auth'
 
 async function owns(customerId: string, addressId: string) {
   const a = await prisma.address.findUnique({ where: { id: addressId } })
   return a?.customerId === customerId
 }
 
+export const dynamic = 'force-dynamic'
+
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getCustomerSession()
-  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  const { error: authError, customer: session } = await requireCustomer(req)
+  if (authError) return authError
   const { id } = await params
   if (!(await owns(session.id, id))) return NextResponse.json({ error: 'Proibido' }, { status: 403 })
   const body = await req.json()
@@ -21,8 +23,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getCustomerSession()
-  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  const { error: authError, customer: session } = await requireCustomer(req)
+  if (authError) return authError
   const { id } = await params
   if (!(await owns(session.id, id))) return NextResponse.json({ error: 'Proibido' }, { status: 403 })
   await prisma.address.delete({ where: { id } })

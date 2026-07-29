@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/admin-auth'
 
+export const dynamic = 'force-dynamic'
+
 type Params = { params: Promise<{ id: string }> }
 
 // GET /api/admin/products/[id]/variants

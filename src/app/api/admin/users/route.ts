@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { requireAdmin, requirePermission } from '@/lib/admin-auth'
 import { hashPassword } from '@/lib/password'
 
+export const dynamic = 'force-dynamic'
+
 const userSelect = {
   id: true,
   name: true,

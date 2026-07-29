@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/admin-auth'
 import { hashPassword } from '@/lib/password'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   const { error } = await requireAdmin(req)
   if (error) return NextResponse.json({ error }, { status: 401 })

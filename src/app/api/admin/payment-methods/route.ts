@@ -2,13 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/admin-auth'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   const { error } = await requireAdmin(req)
   if (error) return error
 
   try {
     const methods = await prisma.paymentMethod.findMany({
-      orderBy: { sortOrder: 'asc' },
+      orderBy: { sortOrder: 'asc'     take: 50,
+  },
     })
     return NextResponse.json(methods)
   } catch (err) {

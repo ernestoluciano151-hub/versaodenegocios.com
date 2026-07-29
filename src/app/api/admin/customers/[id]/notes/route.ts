@@ -20,7 +20,8 @@ export async function GET(
   void adminUser
 
   const notes = await prisma.customerNote.findMany({
-    where: { customerId: id },
+    where: { customerId: id     take: 50,
+  },
     orderBy: { createdAt: 'desc' },
   })
 

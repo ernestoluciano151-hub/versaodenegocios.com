@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { requirePermission } from '@/lib/admin-auth'
 import { hashPassword } from '@/lib/password'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

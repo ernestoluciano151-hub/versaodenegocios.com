@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { logError } from '@/lib/logger'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * Webhook / Callback da EMIS GPO
  *

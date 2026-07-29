@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireCustomerSession } from '@/lib/customer-auth'
+import { requireCustomer } from '@/lib/customer-auth'
 import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'

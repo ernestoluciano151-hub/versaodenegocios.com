@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAdmin } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
-import { auth } from '@/lib/auth'
 import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const FROM = process.env.EMAIL_FROM ?? 'onboarding@resend.dev'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth()
-  const user = session?.user as { type?: string } | undefined
-  if (!session || user?.type !== 'admin') {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
+    }
 
   const { id } = await params
   const campaign = await prisma.campaign.findUnique({ where: { id } })

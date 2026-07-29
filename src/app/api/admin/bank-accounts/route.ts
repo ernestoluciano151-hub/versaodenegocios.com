@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/admin-auth'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   const admin = await requireAdmin(req)
   if (!admin) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
-  const accounts = await prisma.bankAccount.findMany({ orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] })
+  const accounts = await prisma.bankAccount.findMany({ orderBy: [{ sortOrder: 'asc'     take: 50,
+  }, { createdAt: 'asc' }] })
   return NextResponse.json(accounts)
 }
 

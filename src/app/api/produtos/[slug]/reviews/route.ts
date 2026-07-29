@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getCustomerSession } from '@/lib/customer-auth'
+import { requireCustomer } from '@/lib/customer-auth'
 import { rateLimit } from '@/lib/rate-limit'
 import { sanitizeText } from '@/lib/sanitize'
 
@@ -59,7 +59,7 @@ export async function POST(
   if (!rating || rating < 1 || rating > 5) return NextResponse.json({ error: 'Classificação inválida (1–5)' }, { status: 400 })
   if (!reviewBody || reviewBody.length < 10) return NextResponse.json({ error: 'Comentário muito curto (mínimo 10 caracteres)' }, { status: 400 })
 
-  const session = await getCustomerSession().catch(() => null)
+  const session = await getCustomerSession(req).catch(() => null)
 
   const review = await prisma.productReview.create({
     data: {

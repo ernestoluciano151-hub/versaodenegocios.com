@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { requireAdmin } from '@/lib/admin-auth'
 import { uploadImage } from '@/lib/upload/cloudinary'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(req: NextRequest) {
-  const session = await auth()
-  const user = session?.user as { type?: string } | undefined
-  if (!session || user?.type !== 'admin') {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
+    }
 
   try {
     const formData = await req.formData()

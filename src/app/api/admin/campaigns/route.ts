@@ -2,12 +2,15 @@ import { prisma } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   const { error } = await requireAdmin(req)
   if (error) return error
 
 
-  const campaigns = await prisma.campaign.findMany({ orderBy: { createdAt: 'desc' } })
+  const campaigns = await prisma.campaign.findMany({ orderBy: { createdAt: 'desc'     take: 50,
+  } })
   return NextResponse.json(campaigns)
 }
 

@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { requireAdmin } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import { rateLimit } from '@/lib/rate-limit'
 
 // POST — track an event (public, no auth required)
+export const dynamic = 'force-dynamic'
+
 export async function POST(req: NextRequest) {
   // Rate limit: 60 events per IP per minute — prevents database flood attacks
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
@@ -39,10 +41,7 @@ export async function POST(req: NextRequest) {
 
 // GET — analytics data for admin dashboard
 export async function GET(req: NextRequest) {
-  const session = await auth()
-  if ((session?.user as { type?: string })?.type !== 'admin') {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
+
 
   const { searchParams } = new URL(req.url)
   const period = searchParams.get('period') ?? '7d'

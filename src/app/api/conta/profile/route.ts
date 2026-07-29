@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getCustomerSession } from '@/lib/customer-auth'
+import { requireCustomer } from '@/lib/customer-auth'
 import { rateLimit } from '@/lib/rate-limit'
 import { verifyPassword, hashPassword } from '@/lib/password'
 
-export async function GET() {
-  const session = await getCustomerSession()
-  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+export const dynamic = 'force-dynamic'
+
+export async function GET(req: NextRequest) {
+  const { error: authError, customer: session } = await requireCustomer(req)
+  if (authError) return authError
   const customer = await prisma.customer.findUnique({
     where: { id: session.id },
     select: { id: true, name: true, email: true, phone: true, avatar: true, nif: true, totalSpent: true, ordersCount: true, createdAt: true, active: true, prefEmails: true, prefPromos: true, prefNotifications: true },
@@ -15,8 +17,8 @@ export async function GET() {
 }
 
 export async function PATCH(req: NextRequest) {
-  const session = await getCustomerSession()
-  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  const { error: authError, customer: session } = await requireCustomer(req)
+  if (authError) return authError
   const body = await req.json()
   const { name, phone, nif, avatar, currentPassword, newPassword, prefEmails, prefPromos, prefNotifications } = body
 

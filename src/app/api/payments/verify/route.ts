@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * GET /api/payments/verify?orderId=...&ref=...
  * Devolve o estado actual do pagamento de um pedido.

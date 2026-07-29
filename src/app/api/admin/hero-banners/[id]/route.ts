@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
@@ -12,8 +11,8 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth()
-  if (!requireAdmin(session)) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  const { error: _authErr } = await requireAdmin(req)
+  if (_authErr) return _authErr
 
   const { id } = await params
   const body = await req.json()
@@ -25,8 +24,8 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth()
-  if (!requireAdmin(session)) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  const { error: _authErr } = await requireAdmin(req)
+  if (_authErr) return _authErr
 
   const { id } = await params
   await prisma.heroBanner.delete({ where: { id } })

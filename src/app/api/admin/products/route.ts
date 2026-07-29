@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin, requirePermission } from '@/lib/admin-auth'
 
+export const dynamic = 'force-dynamic'
+
 // GET /api/admin/products
 // Params: q, categoryId, visibility, condition, stockStatus, page, limit, sort, order
 export async function GET(req: NextRequest) {

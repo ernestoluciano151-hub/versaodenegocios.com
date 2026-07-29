@@ -17,7 +17,8 @@ export async function GET(
   const { id } = await params
 
   const links = await prisma.affiliateLink.findMany({
-    where: { affiliateId: id },
+    where: { affiliateId: id     take: 100,
+  },
     orderBy: { createdAt: 'desc' },
   })
 

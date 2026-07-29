@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAdmin } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
-import { auth } from '@/lib/auth'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
-  const session = await auth()
-  const user = session?.user as { id?: string; type?: string } | undefined
-
-  if (!session || !user?.id) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
+  const { error: authError, session: authSession } = await requireAdmin(req)
+  if (authError) return authError
+  const user = authSession!.user as { id: string; type: string }
 
   const { searchParams } = req.nextUrl
   const status = searchParams.get('status')

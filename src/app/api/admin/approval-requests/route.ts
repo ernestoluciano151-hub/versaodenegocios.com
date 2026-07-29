@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/admin-auth'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   const { error } = await requireAdmin(req)
   if (error) return error
@@ -11,7 +13,8 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status')
 
     const requests = await prisma.approvalRequest.findMany({
-      where: status ? { status } : undefined,
+      where: status ? { status     take: 50,
+  } : undefined,
       orderBy: { createdAt: 'desc' },
     })
     return NextResponse.json(requests)

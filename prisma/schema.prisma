@@ -792,6 +792,8 @@ model Notification {
   user     User?     @relation(fields: [userId], references: [id])
   customer Customer? @relation(fields: [customerId], references: [id])
 
+  @@index([customerId, read])
+  @@index([userId, read])
   @@map("notifications")
 }
 
@@ -824,6 +826,8 @@ model SupportTicket {
 
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
+  @@index([customerId, status])
+  @@index([status, createdAt])
   @@map("support_tickets")
 }
 

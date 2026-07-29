@@ -1,19 +1,17 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getOrCreateAccount, getConfig, TIER_LABELS, TIER_COLORS } from '@/lib/loyalty'
 
-export async function GET() {
-  const session = await auth()
-  const user = session?.user as { id?: string; type?: string } | undefined
-  if (!session || user?.type !== 'customer') {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
+export const dynamic = 'force-dynamic'
+
+export async function GET(req: NextRequest) {
+  const { error: _authErr, customer: customerSession } = await requireCustomer(req)
+  if (_authErr) return _authErr
 
   const [account, transactions, config] = await Promise.all([
-    getOrCreateAccount(user.id!),
+    getOrCreateAccount(customerSession.id!),
     prisma.pointsTransaction.findMany({
-      where: { customerId: user.id! },
+      where: { customerId: customerSession.id! },
       orderBy: { createdAt: 'desc' },
       take: 50,
     }),

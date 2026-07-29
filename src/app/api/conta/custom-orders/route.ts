@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireCustomerSession } from '@/lib/customer-auth'
+import { requireCustomer } from '@/lib/customer-auth'
 import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
@@ -13,7 +13,8 @@ export async function GET(_req: NextRequest) {
   }
 
   const orders = await prisma.customOrder.findMany({
-    where: { customerId: customer.id, deletedAt: null },
+    where: { customerId: customer.id, deletedAt: null     take: 50,
+  },
     include: {
       messages: { orderBy: { createdAt: 'asc' } },
     },

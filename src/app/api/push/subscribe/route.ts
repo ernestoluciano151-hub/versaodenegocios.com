@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { rateLimit } from '@/lib/rate-limit'
+import { getCustomerSession } from '@/lib/customer-auth'
+
+export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   // Rate limit: 10 subscriptions per IP per hour
@@ -11,8 +13,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Demasiadas tentativas. Aguarde antes de tentar novamente.' }, { status: 429 })
   }
 
-  const session = await auth()
-  const user = session?.user as { id?: string; type?: string } | undefined
+  const customer = await getCustomerSession(req).catch(() => null)
   const body = await req.json()
 
   const { endpoint, keys } = body
@@ -25,13 +26,13 @@ export async function POST(req: NextRequest) {
     update: {
       p256dh: keys.p256dh,
       auth: keys.auth,
-      customerId: user?.type === 'customer' ? (user.id ?? null) : null,
+      customerId: customer?.id ?? null,
     },
     create: {
       endpoint,
       p256dh: keys.p256dh,
       auth: keys.auth,
-      customerId: user?.type === 'customer' ? (user.id ?? null) : null,
+      customerId: customer?.id ?? null,
       userAgent: req.headers.get('user-agent') ?? undefined,
     },
   })

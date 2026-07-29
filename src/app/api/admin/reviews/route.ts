@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
@@ -9,8 +8,8 @@ function requireAdmin(session: Awaited<ReturnType<typeof auth>>) {
 }
 
 export async function GET(req: NextRequest) {
-  const session = await auth()
-  if (!requireAdmin(session)) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  const { error: _authErr } = await requireAdmin(req)
+  if (_authErr) return _authErr
 
   const { searchParams } = new URL(req.url)
   const approved = searchParams.get('approved')
@@ -29,8 +28,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const session = await auth()
-  if (!requireAdmin(session)) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  const { error: _authErr } = await requireAdmin(req)
+  if (_authErr) return _authErr
 
   const { id, approved } = await req.json()
   const review = await prisma.productReview.update({ where: { id }, data: { approved } })
@@ -38,8 +37,8 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const session = await auth()
-  if (!requireAdmin(session)) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  const { error: _authErr } = await requireAdmin(req)
+  if (_authErr) return _authErr
 
   const { id } = await req.json()
   await prisma.productReview.delete({ where: { id } })

@@ -1,22 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAdmin } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
-import { auth } from '@/lib/auth'
 import { DEFAULT_TEMPLATES } from '@/lib/whatsapp'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
-  const session = await auth()
-  if ((session?.user as { type?: string })?.type !== 'admin') {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
-  const templates = await prisma.whatsAppTemplate.findMany({ orderBy: { event: 'asc' } })
+
+  const templates = await prisma.whatsAppTemplate.findMany({ orderBy: { event: 'asc'     take: 100,
+  } })
   return NextResponse.json(templates)
 }
 
 export async function POST(req: NextRequest) {
-  const session = await auth()
-  if ((session?.user as { type?: string })?.type !== 'admin') {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
+
   const body = await req.json()
 
   if (body.seed) {
