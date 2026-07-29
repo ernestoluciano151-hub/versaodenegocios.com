@@ -15,8 +15,9 @@ export default async function ContaPedidoDetailPage({ params }: { params: Promis
   if (!session) redirect('/conta/login')
   const { id } = await params
 
-  const order = await prisma.order.findUnique({
-    where: { id, customerId: session.id }, // Security: only own orders
+  const order = await prisma.order.findFirst({
+    // Security: only own orders (da conta OU guest com o mesmo email)
+    where: { id, OR: [{ customerId: session.id }, { guestEmail: session.email }] },
     include: {
       items: { include: { product: { select: { name: true, slug: true, images: true, brand: true } } } },
       payments: { orderBy: { createdAt: 'desc' } },

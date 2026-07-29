@@ -15,9 +15,15 @@ export async function POST(req: NextRequest,
 
   const { id } = await params
 
-  const order = await prisma.order.findUnique({
-    where: { id, customerId: customer.id },
-    select: { id: true, status: true, createdAt: true, total: true },
+  const order = await prisma.order.findFirst({
+    where: {
+      id,
+      OR: [
+        { customerId: customer.id },
+        { guestEmail: customer.email }, // pedidos feitos sem sessão mas com o mesmo email
+      ],
+    },
+    select: { id: true, status: true, createdAt: true, total: true, stockDeducted: true, customerId: true },
   })
 
   if (!order) return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 })
@@ -36,25 +42,32 @@ export async function POST(req: NextRequest,
 
   // Cancel order and restore stock in a transaction
   await prisma.$transaction(async (tx) => {
-    await tx.order.update({ where: { id }, data: { status: 'cancelled' } })
+    await tx.order.update({
+      where: { id },
+      data: { status: 'cancelled', ...(order.stockDeducted ? { stockDeducted: false } : {}) },
+    })
 
-    // Restore stock for each item
-    const items = await tx.orderItem.findMany({ where: { orderId: id }, select: { productId: true, quantity: true } })
-    for (const item of items) {
-      await tx.product.update({
-        where: { id: item.productId },
-        data: { stock: { increment: item.quantity } },
-      })
+    // Repor stock APENAS se foi deduzido (cash on delivery não deduz no checkout)
+    if (order.stockDeducted) {
+      const items = await tx.orderItem.findMany({ where: { orderId: id }, select: { productId: true, quantity: true } })
+      for (const item of items) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stock: { increment: item.quantity } },
+        })
+      }
     }
 
-    // Update customer stats
-    await tx.customer.update({
-      where: { id: customer.id },
-      data: {
-        totalSpent: { decrement: order.total },
-        ordersCount: { decrement: 1 },
-      },
-    })
+    // Update customer stats (só se o pedido pertence à conta)
+    if (order.customerId) {
+      await tx.customer.update({
+        where: { id: order.customerId },
+        data: {
+          totalSpent: { decrement: order.total },
+          ordersCount: { decrement: 1 },
+        },
+      })
+    }
   })
 
   return NextResponse.json({ ok: true, message: 'Pedido cancelado com sucesso.' })

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getPaymentProvider } from '@/lib/payments'
+import { getCustomerSession } from '@/lib/customer-auth'
 import { sendOrderConfirmation, sendAdminNewOrder } from '@/lib/email'
 import { awardPurchasePoints } from '@/lib/loyalty'
 import { checkoutSchema } from '@/lib/validations'
@@ -124,8 +125,17 @@ export async function POST(req: NextRequest) {
   const total = Math.max(0, subtotal - couponDiscount + SHIPPING_COST)
 
   // ── Find existing customer ────────────────────────────────────────────────
-  const existingCustomer = await prisma.customer.findUnique({ where: { email } })
+  // 1º: sessão iniciada (garante que o pedido aparece na conta do cliente,
+  //     mesmo que digite outro email no formulário)
+  // 2º: fallback por email digitado
+  const loggedCustomer = await getCustomerSession(req).catch(() => null)
+  const existingCustomer = loggedCustomer
+    ? { id: loggedCustomer.id }
+    : await prisma.customer.findUnique({ where: { email }, select: { id: true } })
   const customerId = existingCustomer?.id
+
+  // Cash on delivery: stock só é deduzido quando o admin marca como entregue
+  const deductStockNow = paymentMethod !== 'cash_on_delivery'
 
   // ── Atomic transaction: order + stock + coupon ────────────────────────────
   let order: { id: string }
@@ -157,6 +167,7 @@ export async function POST(req: NextRequest) {
           notes,
           couponCode: couponCode ?? undefined,
           idempotencyKey: idempotencyKey ?? undefined,
+          stockDeducted: deductStockNow,
           shippingAddress: { name, email, phone, street, city, province, country },
           items: {
             create: items.map((item) => {
@@ -180,11 +191,14 @@ export async function POST(req: NextRequest) {
       })
 
       // 3. Decrement stock atomically
-      for (const item of items) {
-        await tx.product.update({
-          where: { id: item.productId },
-          data: { stock: { decrement: item.quantity } },
-        })
+      //    (cash_on_delivery NÃO deduz aqui — só quando o admin marca entregue)
+      if (deductStockNow) {
+        for (const item of items) {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stock: { decrement: item.quantity } },
+          })
+        }
       }
 
       // 4. Update coupon usage atomically

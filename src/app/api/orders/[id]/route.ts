@@ -32,7 +32,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-
+  const { error: authError, session: authSession } = await requireAdmin(req)
+  if (authError) return authError
 
   const { id } = await params
   const body = await req.json()
@@ -46,22 +47,70 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   // Fetch current order before update (to detect status transition)
   const prevOrder = await prisma.order.findUnique({
     where: { id },
-    select: { status: true, customer: { select: { email: true, name: true } }, guestEmail: true, guestName: true, trackingNumber: true },
+    select: {
+      status: true, stockDeducted: true, customerId: true, total: true,
+      customer: { select: { email: true, name: true } },
+      guestEmail: true, guestName: true, trackingNumber: true,
+      items: { select: { productId: true, quantity: true } },
+    },
+  })
+  if (!prevOrder) return NextResponse.json({ error: 'Não encontrado' }, { status: 404 })
+
+  // ── Transições de stock ─────────────────────────────────────────────────────
+  // entregue  + stock ainda não deduzido (cash on delivery) → deduzir agora
+  // cancelado + stock já deduzido → repor stock exacto
+  const statusChanged = status !== undefined && prevOrder.status !== status
+  if (statusChanged && status === 'delivered' && !prevOrder.stockDeducted) {
+    data.stockDeducted = true
+  }
+  if (statusChanged && status === 'cancelled' && prevOrder.stockDeducted) {
+    data.stockDeducted = false
+  }
+
+  const order = await prisma.$transaction(async (tx) => {
+    const updated = await tx.order.update({ where: { id }, data })
+
+    if (statusChanged && status === 'delivered' && !prevOrder.stockDeducted) {
+      for (const item of prevOrder.items) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stock: { decrement: item.quantity } },
+        })
+      }
+    }
+
+    if (statusChanged && status === 'cancelled' && prevOrder.stockDeducted) {
+      for (const item of prevOrder.items) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stock: { increment: item.quantity } },
+        })
+      }
+      // Ajustar estatísticas do cliente
+      if (prevOrder.customerId) {
+        await tx.customer.update({
+          where: { id: prevOrder.customerId },
+          data: {
+            totalSpent: { decrement: prevOrder.total },
+            ordersCount: { decrement: 1 },
+          },
+        })
+      }
+    }
+
+    return updated
   })
 
-  const order = await prisma.order.update({ where: { id }, data })
-
   // Audit log — record every status change
-  if (status !== undefined && prevOrder?.status !== status) {
+  if (statusChanged) {
     try {
-      const adminUser = session?.user as { id?: string } | undefined
       await prisma.auditLog.create({
         data: {
-          userId: adminUser?.id ?? null,
+          userId: authSession?.user?.id ?? null,
           action: 'UPDATE_STATUS',
           entity: 'Order',
           entityId: id,
-          oldData: { status: prevOrder?.status },
+          oldData: { status: prevOrder.status },
           newData: { status },
         },
       })

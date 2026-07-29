@@ -23,13 +23,18 @@ export default async function ContaPedidosPage({ searchParams }: { searchParams:
   if (!session) redirect('/conta/login')
   const { status, q } = await searchParams
 
+  // Inclui pedidos da conta E pedidos guest feitos com o mesmo email
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: any = { customerId: session.id }
+  const where: any = {
+    OR: [{ customerId: session.id }, { guestEmail: session.email }],
+  }
   if (status) where.status = status
-  if (q) where.OR = [
-    { id: { contains: q, mode: 'insensitive' } },
-    { items: { some: { product: { name: { contains: q, mode: 'insensitive' } } } } },
-  ]
+  if (q) where.AND = [{
+    OR: [
+      { id: { contains: q, mode: 'insensitive' } },
+      { items: { some: { product: { name: { contains: q, mode: 'insensitive' } } } } },
+    ],
+  }]
 
   const orders = await prisma.order.findMany({
     where,

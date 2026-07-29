@@ -499,6 +499,9 @@ model Order {
   couponCode       String?
   trackingNumber   String?
   idempotencyKey   String?   @unique
+  /// true = stock já deduzido (pagamentos online deduzem no checkout;
+  /// cash_on_delivery só deduz quando o admin marca como entregue)
+  stockDeducted    Boolean   @default(true)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
