@@ -3,8 +3,8 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   const accounts = await prisma.bankAccount.findMany({
-    where: { active: true     take: 50,
-  },
+    where: { active: true },
+    take: 50,
     orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
     select: { id: true, bankName: true, accountHolder: true, iban: true, nib: true, accountNumber: true, swift: true, notes: true },
   })

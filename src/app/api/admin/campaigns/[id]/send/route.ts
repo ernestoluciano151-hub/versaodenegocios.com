@@ -8,8 +8,9 @@ const FROM = process.env.EMAIL_FROM ?? 'onboarding@resend.dev'
 
 export const dynamic = 'force-dynamic'
 
-export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-    }
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { error } = await requireAdmin(req)
+  if (error) return error
 
   const { id } = await params
   const campaign = await prisma.campaign.findUnique({ where: { id } })

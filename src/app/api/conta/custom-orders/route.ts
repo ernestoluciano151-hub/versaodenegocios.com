@@ -4,17 +4,13 @@ import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(_req: NextRequest) {
-  let customer: { id: string; name: string; email: string; image?: string | null; type: string }
-  try {
-    customer = await requireCustomerSession()
-  } catch {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+export async function GET(req: NextRequest) {
+  const { error: authError, customer } = await requireCustomer(req)
+  if (authError) return authError
 
   const orders = await prisma.customOrder.findMany({
-    where: { customerId: customer.id, deletedAt: null     take: 50,
-  },
+    where: { customerId: customer!.id, deletedAt: null },
+    take: 50,
     include: {
       messages: { orderBy: { createdAt: 'asc' } },
     },
@@ -25,12 +21,8 @@ export async function GET(_req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  let customer: { id: string; name: string; email: string; image?: string | null; type: string }
-  try {
-    customer = await requireCustomerSession()
-  } catch {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const { error: authError, customer } = await requireCustomer(req)
+  if (authError) return authError
 
   const body = await req.json()
   const {
@@ -64,7 +56,7 @@ export async function POST(req: NextRequest) {
 
   const order = await prisma.customOrder.create({
     data: {
-      customerId: customer.id,
+      customerId: customer!.id,
       productName: String(productName).trim(),
       origin: String(origin).trim(),
       productLink: productLink ?? null,
@@ -85,8 +77,8 @@ export async function POST(req: NextRequest) {
     data: {
       type: 'new_custom_order',
       title: 'Nova Encomenda Personalizada',
-      message: `O cliente ${customer.name} (${customer.email}) submeteu uma nova encomenda personalizada: ${order.productName} (${reference}).`,
-      data: { orderId: order.id, customerId: customer.id, route: `/admin/encomendas-personalizadas/${order.id}` },
+      message: `O cliente ${customer!.name} (${customer!.email}) submeteu uma nova encomenda personalizada: ${order.productName} (${reference}).`,
+      data: { orderId: order.id, customerId: customer!.id, route: `/admin/encomendas-personalizadas/${order.id}` },
     },
   })
 

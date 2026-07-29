@@ -5,23 +5,18 @@ import { prisma } from '@/lib/prisma'
 export const dynamic = 'force-dynamic'
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  let adminUser: { id: string }
-  try {
-    adminUser = await requireAdmin(req)
-  } catch {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const { error, session: adminUser } = await requireAdmin(req)
+  if (error) return error
 
   const { id } = await params
-
   void adminUser
 
   const notes = await prisma.customerNote.findMany({
-    where: { customerId: id     take: 50,
-  },
+    where: { customerId: id },
+    take: 50,
     orderBy: { createdAt: 'desc' },
   })
 
@@ -32,12 +27,8 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  let adminUser: { id: string }
-  try {
-    adminUser = await requireAdmin(req)
-  } catch {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const { error, session: adminUser } = await requireAdmin(req)
+  if (error) return error
 
   const { id } = await params
   const body = await req.json()
@@ -58,7 +49,7 @@ export async function POST(
   const note = await prisma.customerNote.create({
     data: {
       customerId: id,
-      adminId: adminUser.id,
+      adminId: adminUser!.id,
       content: body.content.trim(),
     },
   })

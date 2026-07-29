@@ -4,14 +4,14 @@ import { requireAdmin } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const { error } = await requireAdmin(req)
   if (error) return error
 
   try {
     const methods = await prisma.paymentMethod.findMany({
-      orderBy: { sortOrder: 'asc'     take: 50,
-  },
+      orderBy: { sortOrder: 'asc' },
+      take: 50,
     })
     return NextResponse.json(methods)
   } catch (err) {
@@ -20,12 +20,12 @@ export async function GET() {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   const { error } = await requireAdmin(req)
   if (error) return error
 
   try {
-    const body = await request.json()
+    const body = await req.json()
     const { id, ...data } = body
 
     let method

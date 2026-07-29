@@ -5,14 +5,20 @@ import { DEFAULT_TEMPLATES } from '@/lib/whatsapp'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const { error } = await requireAdmin(req)
+  if (error) return error
 
-  const templates = await prisma.whatsAppTemplate.findMany({ orderBy: { event: 'asc'     take: 100,
-  } })
+  const templates = await prisma.whatsAppTemplate.findMany({
+    orderBy: { event: 'asc' },
+    take: 100,
+  })
   return NextResponse.json(templates)
 }
 
 export async function POST(req: NextRequest) {
+  const { error } = await requireAdmin(req)
+  if (error) return error
 
   const body = await req.json()
 

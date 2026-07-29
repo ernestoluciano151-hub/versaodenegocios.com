@@ -5,7 +5,8 @@ import { uploadImage } from '@/lib/upload/cloudinary'
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
-    }
+  const { error } = await requireAdmin(req)
+  if (error) return error
 
   try {
     const formData = await req.formData()

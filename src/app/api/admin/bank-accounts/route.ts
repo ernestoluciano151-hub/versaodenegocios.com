@@ -5,16 +5,20 @@ import { requireAdmin } from '@/lib/admin-auth'
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
-  const admin = await requireAdmin(req)
-  if (!admin) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
-  const accounts = await prisma.bankAccount.findMany({ orderBy: [{ sortOrder: 'asc'     take: 50,
-  }, { createdAt: 'asc' }] })
+  const { error } = await requireAdmin(req)
+  if (error) return error
+
+  const accounts = await prisma.bankAccount.findMany({
+    orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+    take: 50,
+  })
   return NextResponse.json(accounts)
 }
 
 export async function POST(req: NextRequest) {
-  const admin = await requireAdmin(req)
-  if (!admin) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
+  const { error } = await requireAdmin(req)
+  if (error) return error
+
   const body = await req.json()
   if (!body.bankName || !body.accountHolder) {
     return NextResponse.json({ error: 'bankName e accountHolder são obrigatórios.' }, { status: 400 })

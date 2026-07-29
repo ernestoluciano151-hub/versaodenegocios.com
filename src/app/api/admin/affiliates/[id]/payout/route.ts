@@ -5,20 +5,17 @@ import { prisma } from '@/lib/prisma'
 export const dynamic = 'force-dynamic'
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    await requireAdmin(req)
-  } catch {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const { error } = await requireAdmin(req)
+  if (error) return error
 
   const { id } = await params
 
   const payouts = await prisma.affiliatePayoutRequest.findMany({
-    where: { affiliateId: id     take: 50,
-  },
+    where: { affiliateId: id },
+    take: 50,
     orderBy: { createdAt: 'desc' },
   })
 
@@ -29,11 +26,8 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    await requireAdmin(req)
-  } catch {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const { error } = await requireAdmin(req)
+  if (error) return error
 
   const { id } = await params
   const body = await req.json()
