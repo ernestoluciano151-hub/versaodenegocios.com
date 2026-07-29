@@ -4,7 +4,7 @@ import { requireCustomer } from '@/lib/customer-auth'
 
 export const dynamic = 'force-dynamic'
 
-export async function POST(_req: NextRequest, { params }: { params: Promise<{ productId: string }> }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ productId: string }> }) {
   const { error: authError, customer: session } = await requireCustomer(req)
   if (authError) return authError
   const { productId } = await params
@@ -16,7 +16,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ pr
   return NextResponse.json(item, { status: 201 })
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ productId: string }> }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ productId: string }> }) {
   const { error: authError, customer: session } = await requireCustomer(req)
   if (authError) return authError
   const { productId } = await params

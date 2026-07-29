@@ -29,7 +29,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
 }
 
 // DELETE /api/admin/products/[id]/variants/[variantId]
-export async function DELETE(_req: NextRequest, { params }: Params) {
+export async function DELETE(req: NextRequest, { params }: Params) {
   const { error } = await requireAdmin(req)
   if (error) return NextResponse.json({ error }, { status: 401 })
 

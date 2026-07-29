@@ -19,7 +19,7 @@ const userSelect = {
   createdAt: true,
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const { error } = await requireAdmin(req)
   if (error) return error
 

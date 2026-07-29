@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 
@@ -31,7 +31,7 @@ function buildTree(
     }))
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const { error } = await requireAdmin(req)
   if (error) return error
 

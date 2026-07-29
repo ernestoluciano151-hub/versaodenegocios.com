@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireAdmin } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
-
-function requireAdmin(session: Awaited<ReturnType<typeof auth>>) {
-  return (session?.user as { type?: string })?.type === 'admin'
-}
 
 export async function PATCH(
   req: NextRequest,
@@ -21,7 +18,7 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { error: _authErr } = await requireAdmin(req)

@@ -8,12 +8,8 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  let customer: { id: string; name: string; email: string; image?: string | null; type: string }
-  try {
-    customer = await requireCustomerSession()
-  } catch {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const { error: authError, customer } = await requireCustomer(req)
+  if (authError) return authError
 
   const { id } = await params
   const body = await req.json()

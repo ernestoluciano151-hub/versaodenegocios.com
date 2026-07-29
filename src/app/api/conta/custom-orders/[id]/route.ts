@@ -4,16 +4,11 @@ import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-  _req: NextRequest,
+export async function GET(req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  let customer: { id: string; name: string; email: string; image?: string | null; type: string }
-  try {
-    customer = await requireCustomerSession()
-  } catch {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const { error: authError, customer } = await requireCustomer(req)
+  if (authError) return authError
 
   const { id } = await params
 

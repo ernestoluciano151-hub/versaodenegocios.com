@@ -7,6 +7,7 @@
  */
 import { NextResponse, type NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
+import { auth } from './auth'
 import { prisma } from './prisma'
 
 export type CustomerSession = {
@@ -41,11 +42,25 @@ async function readCustomerToken(req: NextRequest): Promise<CustomerSession | nu
 }
 
 /**
- * Lê a sessão do cliente a partir do request.
+ * Lê a sessão do cliente.
+ * - Em route handlers: passar `req` (usa getToken, fiável no Next.js 16).
+ * - Em Server Components (pages/layouts): chamar sem argumentos (usa auth()).
  * Retorna null se não houver sessão ou se for um admin.
  */
-export async function getCustomerSession(req: NextRequest): Promise<CustomerSession | null> {
-  return readCustomerToken(req)
+export async function getCustomerSession(req?: NextRequest): Promise<CustomerSession | null> {
+  if (req) return readCustomerToken(req)
+
+  // Server Component — auth() funciona aqui (não em route handlers)
+  const session = await auth()
+  const user = session?.user as (CustomerSession & { type?: string }) | undefined
+  if (!user || user.type !== 'customer') return null
+  return {
+    id: user.id ?? '',
+    name: user.name ?? '',
+    email: user.email ?? '',
+    image: user.image ?? null,
+    type: 'customer',
+  }
 }
 
 /**

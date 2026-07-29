@@ -5,9 +5,8 @@ import { uploadImage } from '@/lib/upload/cloudinary'
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
-  try { await requireCustomerSession() } catch {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
+  const { error: authError } = await requireCustomer(req)
+  if (authError) return authError
 
   try {
     const formData = await req.formData()

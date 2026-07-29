@@ -4,14 +4,11 @@ import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-  _req: NextRequest,
+export async function GET(req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  let customer
-  try { customer = await requireCustomerSession() } catch {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const { error: authError, customer } = await requireCustomer(req)
+  if (authError) return authError
   const { id } = await params
   const notification = await prisma.notification.findFirst({
     where: { id, customerId: customer.id },
@@ -20,14 +17,11 @@ export async function GET(
   return NextResponse.json(notification)
 }
 
-export async function PATCH(
-  _req: NextRequest,
+export async function PATCH(req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  let customer
-  try { customer = await requireCustomerSession() } catch {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const { error: authError, customer } = await requireCustomer(req)
+  if (authError) return authError
   const { id } = await params
   const notification = await prisma.notification.updateMany({
     where: { id, customerId: customer.id },

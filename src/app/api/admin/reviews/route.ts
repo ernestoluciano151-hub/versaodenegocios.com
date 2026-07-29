@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireAdmin } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
-
-function requireAdmin(session: Awaited<ReturnType<typeof auth>>) {
-  return (session?.user as { type?: string })?.type === 'admin'
-}
 
 export async function GET(req: NextRequest) {
   const { error: _authErr } = await requireAdmin(req)

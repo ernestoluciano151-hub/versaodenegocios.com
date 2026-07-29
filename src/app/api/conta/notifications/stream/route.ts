@@ -1,14 +1,12 @@
 import { NextRequest } from 'next/server'
-import { requireCustomerSession } from '@/lib/customer-auth'
+import { requireCustomer } from '@/lib/customer-auth'
 import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
-  let customer
-  try { customer = await requireCustomerSession() } catch {
-    return new Response('Unauthorized', { status: 401 })
-  }
+  const { error: authError, customer } = await requireCustomer(req)
+  if (authError) return new Response('Unauthorized', { status: 401 })
 
   const encoder = new TextEncoder()
   let lastCheck = new Date()

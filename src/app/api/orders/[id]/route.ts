@@ -6,7 +6,7 @@ import { logError } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { error: authError, session: authSession } = await requireAdmin(req)
   if (authError) return authError
   const user = authSession!.user as { id: string; type: string }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireCustomer } from '@/lib/customer-auth'
+import { requireCustomer, getCustomerSession } from '@/lib/customer-auth'
 import { rateLimit } from '@/lib/rate-limit'
 import { sanitizeText } from '@/lib/sanitize'
 

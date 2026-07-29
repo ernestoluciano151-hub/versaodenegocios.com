@@ -4,13 +4,9 @@ import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(_req: NextRequest) {
-  let customer: { id: string; name: string; email: string; image?: string | null; type: string }
-  try {
-    customer = await requireCustomerSession()
-  } catch {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+export async function GET(req: NextRequest) {
+  const { error: authError, customer } = await requireCustomer(req)
+  if (authError) return authError
 
   const affiliate = await prisma.affiliate.findUnique({
     where: { customerId: customer.id },
@@ -30,12 +26,8 @@ export async function GET(_req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  let customer: { id: string; name: string; email: string; image?: string | null; type: string }
-  try {
-    customer = await requireCustomerSession()
-  } catch {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const { error: authError, customer } = await requireCustomer(req)
+  if (authError) return authError
 
   const body = await req.json()
   const { name, targetType, targetId, url } = body

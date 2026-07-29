@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 
 const SINGLETON_ID = 'singleton'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const { error } = await requireAdmin(req)
   if (error) return error
   try {

@@ -7,14 +7,11 @@ export const dynamic = 'force-dynamic'
 // Cancellation window: 1 hour after order creation
 const CANCEL_WINDOW_MS = 60 * 60 * 1000
 
-export async function POST(
-  _req: NextRequest,
+export async function POST(req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  let customer
-  try { customer = await requireCustomerSession() } catch {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
+  const { error: authError, customer } = await requireCustomer(req)
+  if (authError) return authError
 
   const { id } = await params
 

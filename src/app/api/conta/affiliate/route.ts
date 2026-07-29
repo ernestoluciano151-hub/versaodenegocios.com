@@ -8,13 +8,9 @@ function generateCode(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase()
 }
 
-export async function GET(_req: NextRequest) {
-  let customer: { id: string; name: string; email: string; image?: string | null; type: string }
-  try {
-    customer = await requireCustomerSession()
-  } catch {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+export async function GET(req: NextRequest) {
+  const { error: authError, customer } = await requireCustomer(req)
+  if (authError) return authError
 
   let affiliate
   try {
@@ -48,13 +44,9 @@ export async function GET(_req: NextRequest) {
   })
 }
 
-export async function POST(_req: NextRequest) {
-  let customer: { id: string; name: string; email: string; image?: string | null; type: string }
-  try {
-    customer = await requireCustomerSession()
-  } catch {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+export async function POST(req: NextRequest) {
+  const { error: authError, customer } = await requireCustomer(req)
+  if (authError) return authError
 
   const existing = await prisma.affiliate.findUnique({ where: { customerId: customer.id } })
   if (existing) {
@@ -86,12 +78,8 @@ export async function POST(_req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  let customer: { id: string; name: string; email: string; image?: string | null; type: string }
-  try {
-    customer = await requireCustomerSession()
-  } catch {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const { error: authError, customer } = await requireCustomer(req)
+  if (authError) return authError
 
   const body = await req.json()
   const { paymentDetails } = body

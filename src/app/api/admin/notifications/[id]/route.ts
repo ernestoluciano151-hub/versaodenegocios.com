@@ -22,7 +22,7 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try { await requireAdmin(req) } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }

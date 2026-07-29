@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { requireCustomer } from '@/lib/customer-auth'
 import { prisma } from '@/lib/prisma'
 import { getOrCreateAccount, getConfig, TIER_LABELS, TIER_COLORS } from '@/lib/loyalty'
 

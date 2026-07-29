@@ -16,8 +16,8 @@ const TYPE_GROUPS: Record<string, string[]> = {
 }
 
 export async function GET(req: NextRequest) {
-  let customer
-  try { customer = await requireCustomerSession() } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
+  const { error: authError, customer } = await requireCustomer(req)
+  if (authError) return authError
 
   const { searchParams } = req.nextUrl
   const filter = searchParams.get('filter') ?? 'todas'
@@ -67,8 +67,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  let customer
-  try { customer = await requireCustomerSession() } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
+  const { error: authError, customer } = await requireCustomer(req)
+  if (authError) return authError
 
   const result = await prisma.notification.updateMany({
     where: { customerId: customer.id, read: false },
