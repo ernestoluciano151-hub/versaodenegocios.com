@@ -5,11 +5,8 @@ import { prisma } from '@/lib/prisma'
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
-  try {
-    await requireAdmin(req)
-  } catch {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const { error: authError } = await requireAdmin(req)
+  if (authError) return authError
 
   const { searchParams } = new URL(req.url)
   const status = searchParams.get('status')
@@ -73,11 +70,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  try {
-    await requireAdmin(req)
-  } catch {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const { error: authError } = await requireAdmin(req)
+  if (authError) return authError
 
   const body = await req.json()
   const {

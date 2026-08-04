@@ -5,7 +5,8 @@ import { requireAdmin } from '@/lib/admin-auth'
 export const dynamic = 'force-dynamic'
 
 export async function PATCH(req: NextRequest) {
-  try { await requireAdmin(req) } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
+  const { error: authError } = await requireAdmin(req)
+  if (authError) return authError
 
   const result = await prisma.notification.updateMany({
     where: { read: false, customerId: null },

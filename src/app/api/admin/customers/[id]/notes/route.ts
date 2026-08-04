@@ -49,7 +49,8 @@ export async function POST(
   const note = await prisma.customerNote.create({
     data: {
       customerId: id,
-      adminId: adminUser!.id,
+      authorId: adminUser!.user.id,
+      authorName: adminUser!.user.name,
       content: body.content.trim(),
     },
   })

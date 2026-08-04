@@ -5,9 +5,8 @@ import { prisma } from '@/lib/prisma'
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
-  try { await requireAdmin(req) } catch {
-    return new Response('Unauthorized', { status: 401 })
-  }
+  const { error: authError } = await requireAdmin(req)
+  if (authError) return new Response('Unauthorized', { status: 401 })
 
   const encoder = new TextEncoder()
   let lastCheck = new Date()

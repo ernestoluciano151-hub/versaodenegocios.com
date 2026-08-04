@@ -19,7 +19,8 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try { await requireAdmin(req) } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
+  const { error: authError } = await requireAdmin(req)
+  if (authError) return authError
 
   const { id } = await params
   const body = await req.json()
