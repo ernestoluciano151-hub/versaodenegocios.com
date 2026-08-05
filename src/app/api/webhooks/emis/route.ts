@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { logError } from '@/lib/logger'
+import { deductStockOnGpoPayment } from '@/lib/orders/stock'
 
 export const dynamic = 'force-dynamic'
 
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest) {
         ],
       },
       orderBy: { createdAt: 'desc' },
-      select: { id: true, orderId: true, paymentStatus: true },
+      select: { id: true, orderId: true, paymentStatus: true, paymentMethod: true },
     })
 
     if (!payment) {
@@ -106,10 +107,17 @@ export async function POST(req: NextRequest) {
 
     // Actualizar status do pedido
     if (internalStatus === 'paid') {
-      await prisma.order.update({
-        where: { id: payment.orderId },
-        data: { status: 'processing' },
-      })
+      // Multicaixa Express (GPO): o pagamento é confirmado instantaneamente
+      // pelo push — deduz o stock já aqui (não espera pela entrega, ao
+      // contrário de cash on delivery, referência e transferência bancária).
+      if (payment.paymentMethod === 'multicaixa_express') {
+        await deductStockOnGpoPayment(payment.orderId)
+      } else {
+        await prisma.order.update({
+          where: { id: payment.orderId },
+          data: { status: 'processing' },
+        })
+      }
     } else if (['failed', 'cancelled'].includes(internalStatus)) {
       await prisma.order.update({
         where: { id: payment.orderId },
@@ -137,7 +145,7 @@ export async function GET(req: NextRequest) {
     try {
       const payment = await prisma.payment.findFirst({
         where: { orderId },
-        select: { id: true },
+        select: { id: true, paymentMethod: true },
       })
       if (payment) {
         await prisma.payment.update({
@@ -145,10 +153,14 @@ export async function GET(req: NextRequest) {
           data: { paymentStatus: internalStatus },
         })
         if (internalStatus === 'paid') {
-          await prisma.order.update({
-            where: { id: orderId },
-            data: { status: 'processing' },
-          })
+          if (payment.paymentMethod === 'multicaixa_express') {
+            await deductStockOnGpoPayment(orderId)
+          } else {
+            await prisma.order.update({
+              where: { id: orderId },
+              data: { status: 'processing' },
+            })
+          }
         }
       }
     } catch (err) {

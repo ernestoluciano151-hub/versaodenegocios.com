@@ -134,8 +134,12 @@ export async function POST(req: NextRequest) {
     : await prisma.customer.findUnique({ where: { email }, select: { id: true } })
   const customerId = existingCustomer?.id
 
-  // Cash on delivery: stock só é deduzido quando o admin marca como entregue
-  const deductStockNow = paymentMethod !== 'cash_on_delivery'
+  // O stock nunca é deduzido no checkout, seja qual for o método de pagamento
+  // (Multicaixa Express, referência, transferência bancária ou cash on delivery).
+  // Só é deduzido quando o admin confirma a ENTREGA (ver PATCH /api/orders/[id]),
+  // para que o stock disponível na loja reflicta sempre o stock físico real e
+  // não fique "reservado" por pedidos pagos mas ainda não expedidos/cancelados.
+  const deductStockNow = false
 
   // ── Atomic transaction: order + stock + coupon ────────────────────────────
   let order: { id: string }
@@ -191,7 +195,8 @@ export async function POST(req: NextRequest) {
       })
 
       // 3. Decrement stock atomically
-      //    (cash_on_delivery NÃO deduz aqui — só quando o admin marca entregue)
+      //    (deductStockNow é sempre false — mantido por segurança/clareza,
+      //    a dedução real acontece só na entrega, ver PATCH /api/orders/[id])
       if (deductStockNow) {
         for (const item of items) {
           await tx.product.update({

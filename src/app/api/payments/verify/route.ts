@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getPaymentProvider, type PaymentMethodType } from '@/lib/payments'
+import { deductStockOnGpoPayment } from '@/lib/orders/stock'
 
 export const dynamic = 'force-dynamic'
 
@@ -50,21 +51,26 @@ export async function GET(req: NextRequest) {
       const provider = getPaymentProvider(payment.paymentMethod as PaymentMethodType)
       const result = await provider.verifyPayment(payment.transactionReference)
       if (result.success) {
-        await prisma.$transaction([
-          prisma.payment.update({
-            where: { id: payment.id },
-            data: {
-              paymentStatus: 'paid',
-              paymentDate: new Date(),
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              gatewayResponse: (result.gatewayResponse ?? {}) as any,
-            },
-          }),
-          prisma.order.update({
+        await prisma.payment.update({
+          where: { id: payment.id },
+          data: {
+            paymentStatus: 'paid',
+            paymentDate: new Date(),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            gatewayResponse: (result.gatewayResponse ?? {}) as any,
+          },
+        })
+        // Multicaixa Express (GPO): pagamento confirmado — deduz stock já
+        // aqui (não espera pela entrega). Referência/transferência continuam
+        // a só deduzir na entrega.
+        if (payment.paymentMethod === 'multicaixa_express') {
+          await deductStockOnGpoPayment(payment.orderId)
+        } else {
+          await prisma.order.update({
             where: { id: payment.orderId },
             data: { status: 'processing' },
-          }),
-        ])
+          })
+        }
         return NextResponse.json({
           status: 'paid',
           orderId: payment.orderId,

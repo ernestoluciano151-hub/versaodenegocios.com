@@ -57,8 +57,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!prevOrder) return NextResponse.json({ error: 'Não encontrado' }, { status: 404 })
 
   // ── Transições de stock ─────────────────────────────────────────────────────
-  // entregue  + stock ainda não deduzido (cash on delivery) → deduzir agora
-  // cancelado + stock já deduzido → repor stock exacto
+  // O stock nunca é deduzido no checkout (qualquer método de pagamento) — só
+  // é deduzido quando a encomenda é marcada como "entregue".
+  // entregue  + stock ainda não deduzido → deduzir agora
+  // cancelado + stock já deduzido        → repor stock exacto
   const statusChanged = status !== undefined && prevOrder.status !== status
   if (statusChanged && status === 'delivered' && !prevOrder.stockDeducted) {
     data.stockDeducted = true
@@ -82,7 +84,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             type: 'out',
             quantity: item.quantity,
             reference: `Pedido #${id.slice(-8).toUpperCase()}`,
-            notes: 'Saída — entrega confirmada (cash on delivery)',
+            notes: 'Saída — entrega confirmada',
           },
         })
       }
