@@ -22,6 +22,7 @@ export default async function PesquisaPage({ searchParams }: { searchParams: Pro
     ? await prisma.product.findMany({
         where: {
           active: true,
+          visibility: 'visible',
           deletedAt: null,
           OR: [
             { name: { contains: query, mode: 'insensitive' } },

@@ -23,7 +23,7 @@ interface CartStore {
 
 export const useCartStore = create<CartStore>()(
   persist(
-    (set, get) => ({
+    (set, get): CartStore => ({
       items: [],
       couponCode: undefined,
       couponDiscount: 0,
@@ -99,3 +99,32 @@ export const useCartStore = create<CartStore>()(
     { name: 'vn-cart' }
   )
 )
+
+// ── Sincronização com o servidor (carrinhos abandonados no admin) ─────────────
+// O carrinho vive em localStorage (Zustand persist) para performance, mas o
+// admin precisa de ver os carrinhos activos/abandonados — por isso replicamos
+// o estado para a base de dados (Cart/CartItem) sempre que ele muda, com
+// debounce para não disparar um pedido por cada clique.
+if (typeof window !== 'undefined') {
+  let syncTimer: ReturnType<typeof setTimeout> | null = null
+  let lastSynced = ''
+
+  const syncCart = (items: CartItem[]) => {
+    const payload = JSON.stringify(
+      items.map((i) => ({ productId: i.productId, quantity: i.quantity, savedForLater: !!i.savedForLater }))
+    )
+    if (payload === lastSynced) return
+    lastSynced = payload
+    fetch('/api/cart', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: JSON.parse(payload) }),
+      keepalive: true,
+    }).catch(() => {})
+  }
+
+  useCartStore.subscribe((state) => {
+    if (syncTimer) clearTimeout(syncTimer)
+    syncTimer = setTimeout(() => syncCart(state.items), 1200)
+  })
+}

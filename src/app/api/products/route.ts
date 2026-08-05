@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const page = Number(searchParams.get('page') ?? 1)
   const skip = (page - 1) * limit
 
-  const where: Record<string, unknown> = { active: true }
+  const where: Record<string, unknown> = { active: true, visibility: 'visible', deletedAt: null }
   if (search) {
     where.OR = [
       { name: { contains: search, mode: 'insensitive' } },

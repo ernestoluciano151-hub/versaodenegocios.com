@@ -9,7 +9,7 @@ type Params = { params: Promise<{ id: string; variantId: string }> }
 // PUT /api/admin/products/[id]/variants/[variantId]
 export async function PUT(req: NextRequest, { params }: Params) {
   const { error } = await requireAdmin(req)
-  if (error) return NextResponse.json({ error }, { status: 401 })
+  if (error) return error
 
   const { variantId } = await params
   const body = await req.json()
@@ -31,7 +31,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
 // DELETE /api/admin/products/[id]/variants/[variantId]
 export async function DELETE(req: NextRequest, { params }: Params) {
   const { error } = await requireAdmin(req)
-  if (error) return NextResponse.json({ error }, { status: 401 })
+  if (error) return error
 
   const { variantId } = await params
   await prisma.productVariant.delete({ where: { id: variantId } })

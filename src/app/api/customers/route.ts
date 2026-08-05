@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
   const { error } = await requireAdmin(req)
-  if (error) return NextResponse.json({ error }, { status: 401 })
+  if (error) return error
 
   const { searchParams } = req.nextUrl
   const search = searchParams.get('search')
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const { error } = await requireAdmin(req)
-  if (error) return NextResponse.json({ error }, { status: 401 })
+  if (error) return error
 
   const { name, email, phone, password } = await req.json()
   if (!name || !email) return NextResponse.json({ error: 'Nome e email obrigatórios.' }, { status: 400 })

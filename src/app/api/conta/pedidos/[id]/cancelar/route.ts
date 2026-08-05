@@ -55,6 +55,15 @@ export async function POST(req: NextRequest,
           where: { id: item.productId },
           data: { stock: { increment: item.quantity } },
         })
+        await tx.inventoryMovement.create({
+          data: {
+            productId: item.productId,
+            type: 'in',
+            quantity: item.quantity,
+            reference: `Pedido #${id.slice(-8).toUpperCase()}`,
+            notes: 'Reposição — cancelado pelo cliente',
+          },
+        })
       }
     }
 

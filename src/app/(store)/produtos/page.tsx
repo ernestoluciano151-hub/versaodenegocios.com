@@ -34,7 +34,7 @@ async function getProducts(params: SearchParams) {
   const skip = (page - 1) * limit
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: any = { active: true }
+  const where: any = { active: true, visibility: 'visible', deletedAt: null }
   if (params.search) where.OR = [
     { name: { contains: params.search, mode: 'insensitive' } },
     { brand: { contains: params.search, mode: 'insensitive' } },
@@ -62,7 +62,7 @@ async function getProducts(params: SearchParams) {
     prisma.product.findMany({ where, include: { category: true }, orderBy, skip, take: limit }),
     prisma.product.count({ where }),
     prisma.category.findMany({ where: { active: true, parentId: null }, orderBy: { displayOrder: 'asc' } }),
-    prisma.product.findMany({ where: { active: true }, select: { brand: true }, distinct: ['brand'], orderBy: { brand: 'asc' } }),
+    prisma.product.findMany({ where: { active: true, visibility: 'visible', deletedAt: null }, select: { brand: true }, distinct: ['brand'], orderBy: { brand: 'asc' } }),
   ])
 
   return { products, total, categories, brands: brands.map((b) => b.brand), page, totalPages: Math.ceil(total / limit) }

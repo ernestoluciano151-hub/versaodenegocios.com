@@ -25,14 +25,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const product = await prisma.product.findUnique({
-    where: { slug, active: true },
+    where: { slug, active: true, visibility: 'visible', deletedAt: null },
     include: { category: true },
   })
 
   if (!product) notFound()
 
   const related = await prisma.product.findMany({
-    where: { active: true, categoryId: product.categoryId, id: { not: product.id } },
+    where: { active: true, visibility: 'visible', deletedAt: null, categoryId: product.categoryId, id: { not: product.id } },
     take: 4,
   })
 

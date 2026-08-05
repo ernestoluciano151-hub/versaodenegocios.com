@@ -11,7 +11,7 @@ import Image from 'next/image'
 
 async function getFeaturedProducts() {
   return prisma.product.findMany({
-    where: { active: true, featured: true },
+    where: { active: true, visibility: 'visible', deletedAt: null, featured: true },
     include: { category: true },
     orderBy: { updatedAt: 'desc' },
     take: 8,
@@ -20,7 +20,7 @@ async function getFeaturedProducts() {
 
 async function getNewProducts() {
   return prisma.product.findMany({
-    where: { active: true, isNew: true },
+    where: { active: true, visibility: 'visible', deletedAt: null, isNew: true },
     include: { category: true },
     orderBy: { createdAt: 'desc' },
     take: 4,
@@ -29,7 +29,7 @@ async function getNewProducts() {
 
 async function getBestsellers() {
   return prisma.product.findMany({
-    where: { active: true, isBestseller: true },
+    where: { active: true, visibility: 'visible', deletedAt: null, isBestseller: true },
     include: { category: true },
     take: 4,
   })
@@ -45,7 +45,7 @@ async function getCategories() {
 
 async function getSaleProducts() {
   return prisma.product.findMany({
-    where: { active: true, salePrice: { not: null } },
+    where: { active: true, visibility: 'visible', deletedAt: null, salePrice: { not: null } },
     orderBy: { updatedAt: 'desc' },
     take: 4,
   })

@@ -76,6 +76,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           where: { id: item.productId },
           data: { stock: { decrement: item.quantity } },
         })
+        await tx.inventoryMovement.create({
+          data: {
+            productId: item.productId,
+            type: 'out',
+            quantity: item.quantity,
+            reference: `Pedido #${id.slice(-8).toUpperCase()}`,
+            notes: 'Saída — entrega confirmada (cash on delivery)',
+          },
+        })
       }
     }
 
@@ -84,6 +93,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         await tx.product.update({
           where: { id: item.productId },
           data: { stock: { increment: item.quantity } },
+        })
+        await tx.inventoryMovement.create({
+          data: {
+            productId: item.productId,
+            type: 'in',
+            quantity: item.quantity,
+            reference: `Pedido #${id.slice(-8).toUpperCase()}`,
+            notes: 'Reposição — pedido cancelado',
+          },
         })
       }
       // Ajustar estatísticas do cliente

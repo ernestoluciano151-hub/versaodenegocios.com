@@ -9,7 +9,7 @@ type Params = { params: Promise<{ id: string }> }
 // GET /api/admin/products/[id]/variants
 export async function GET(req: NextRequest, { params }: Params) {
   const { error } = await requireAdmin(req)
-  if (error) return NextResponse.json({ error }, { status: 401 })
+  if (error) return error
 
   const { id } = await params
   const variants = await prisma.productVariant.findMany({
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest, { params }: Params) {
 // POST /api/admin/products/[id]/variants — create variant
 export async function POST(req: NextRequest, { params }: Params) {
   const { error } = await requireAdmin(req)
-  if (error) return NextResponse.json({ error }, { status: 401 })
+  if (error) return error
 
   const { id: productId } = await params
   const body = await req.json()
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 // Body: [{ id, position }] for reorder  OR  { id, ...fields } for single update
 export async function PATCH(req: NextRequest, { params }: Params) {
   const { error } = await requireAdmin(req)
-  if (error) return NextResponse.json({ error }, { status: 401 })
+  if (error) return error
 
   await params
   const body = await req.json()

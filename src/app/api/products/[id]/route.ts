@@ -14,28 +14,49 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   return NextResponse.json(product)
 }
 
+// Mantém `active` e `visibility` sincronizados quando o form de edição
+// (ProductEditForm) altera apenas o interruptor "Activo" sem tocar na
+// visibilidade — evita o produto ficar preso num estado inconsistente
+// (ex.: active=true mas visibility='archived', que a loja continuaria a
+// esconder).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function syncVisibility(body: any) {
+  const data: Record<string, unknown> = { ...body }
+  if (typeof data.active === 'boolean' && data.visibility === undefined) {
+    if (data.active) {
+      data.visibility = 'visible'
+    } else if (data.active === false) {
+      // Só rebaixa para 'hidden' se ainda estava 'visible' — não mexe em
+      // archived/maintenance/etc. definidos explicitamente noutro lado.
+      data.visibility = 'hidden'
+    }
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return data as any
+}
+
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { error } = await requireAdmin(req)
-  if (error) return NextResponse.json({ error }, { status: 401 })
+  if (error) return error
   const { id } = await params
   const body = await req.json()
-  const product = await prisma.product.update({ where: { id }, data: body })
+  const product = await prisma.product.update({ where: { id }, data: syncVisibility(body) })
   return NextResponse.json(product)
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { error } = await requireAdmin(req)
-  if (error) return NextResponse.json({ error }, { status: 401 })
+  if (error) return error
   const { id } = await params
   const body = await req.json()
-  const product = await prisma.product.update({ where: { id }, data: body })
+  const product = await prisma.product.update({ where: { id }, data: syncVisibility(body) })
   return NextResponse.json(product)
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { error } = await requireAdmin(req)
-  if (error) return NextResponse.json({ error }, { status: 401 })
+  if (error) return error
   const { id } = await params
-  await prisma.product.update({ where: { id }, data: { active: false } })
+  await prisma.product.update({ where: { id }, data: { active: false, visibility: 'archived' } })
   return NextResponse.json({ success: true })
 }

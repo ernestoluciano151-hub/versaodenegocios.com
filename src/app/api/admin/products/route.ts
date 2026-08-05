@@ -102,15 +102,24 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'IDs obrigatórios' }, { status: 400 })
     }
 
+    // A loja pública só mostra produtos com active=true E visibility='visible'.
+    // Mantemos os dois campos sincronizados aqui para que as acções do admin
+    // se reflictam sempre correctamente na loja (evita o bug de produto
+    // "arquivado"/"oculto" continuar visível porque só um dos campos mudou).
+    const VALID_VISIBILITY = new Set([
+      'visible', 'hidden', 'maintenance', 'out_of_stock',
+      'catalog_only', 'members_only', 'affiliates_only', 'archived',
+    ])
+
     switch (action) {
       case 'archive':
-        await prisma.product.updateMany({ where: { id: { in: ids } }, data: { visibility: 'archived' as never } })
+        await prisma.product.updateMany({ where: { id: { in: ids } }, data: { visibility: 'archived' as never, active: false } })
         break
       case 'unarchive':
-        await prisma.product.updateMany({ where: { id: { in: ids } }, data: { visibility: 'visible' as never } })
+        await prisma.product.updateMany({ where: { id: { in: ids } }, data: { visibility: 'visible' as never, active: true } })
         break
       case 'activate':
-        await prisma.product.updateMany({ where: { id: { in: ids } }, data: { active: true } })
+        await prisma.product.updateMany({ where: { id: { in: ids } }, data: { active: true, visibility: 'visible' as never } })
         break
       case 'deactivate':
         await prisma.product.updateMany({ where: { id: { in: ids } }, data: { active: false } })
@@ -120,8 +129,13 @@ export async function PATCH(req: NextRequest) {
         await prisma.product.updateMany({ where: { id: { in: ids } }, data: { visibility: 'archived' as never, active: false } })
         break
       case 'visibility':
-        if (!value) return NextResponse.json({ error: 'value obrigatório' }, { status: 400 })
-        await prisma.product.updateMany({ where: { id: { in: ids } }, data: { visibility: value as never } })
+        if (!value || !VALID_VISIBILITY.has(value)) {
+          return NextResponse.json({ error: 'Visibilidade inválida' }, { status: 400 })
+        }
+        await prisma.product.updateMany({
+          where: { id: { in: ids } },
+          data: { visibility: value as never, active: value === 'visible' },
+        })
         break
       case 'featured':
         await prisma.product.updateMany({ where: { id: { in: ids } }, data: { featured: value === 'true' } })

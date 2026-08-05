@@ -198,6 +198,15 @@ export async function POST(req: NextRequest) {
             where: { id: item.productId },
             data: { stock: { decrement: item.quantity } },
           })
+          await tx.inventoryMovement.create({
+            data: {
+              productId: item.productId,
+              type: 'out',
+              quantity: item.quantity,
+              reference: `Pedido #${newOrder.id.slice(-8).toUpperCase()}`,
+              notes: 'Saída automática — checkout',
+            },
+          })
         }
       }
 
