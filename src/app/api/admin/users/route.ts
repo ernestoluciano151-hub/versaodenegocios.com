@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const { error } = await requirePermission('canManageUsers', req)
+  const { error } = await requirePermission('canManageUsers', request)
   if (error) return error
 
   try {

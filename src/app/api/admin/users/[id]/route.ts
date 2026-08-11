@@ -19,10 +19,10 @@ const userSelect = {
 }
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { error } = await requireAdmin(req)
+  const { error } = await requireAdmin(request)
   if (error) return error
 
   try {
@@ -47,7 +47,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { error } = await requirePermission('canManageUsers', req)
+  const { error } = await requirePermission('canManageUsers', request)
   if (error) return error
 
   try {
@@ -77,10 +77,10 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { error } = await requirePermission('canManageUsers', req)
+  const { error } = await requirePermission('canManageUsers', request)
   if (error) return error
 
   try {

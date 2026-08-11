@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const { error } = await requirePermission('canChangeSettings', req)
+  const { error } = await requirePermission('canChangeSettings', request)
   if (error) return error
 
   try {

@@ -3,6 +3,8 @@ import { requireAdmin } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import { sendOrderShippedEmail } from '@/lib/email'
 import { logError } from '@/lib/logger'
+import { revokePointsForOrder } from '@/lib/loyalty'
+import { cancelCommissionForOrder } from '@/lib/affiliate'
 
 export const dynamic = 'force-dynamic'
 
@@ -120,6 +122,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     return updated
   })
+
+  // Reverter pontos de fidelização se o pedido foi cancelado (best-effort —
+  // não pode bloquear o cancelamento em si)
+  if (statusChanged && status === 'cancelled') {
+    try { await revokePointsForOrder(id) } catch (err) { logError(err, 'orders:revoke-points') }
+    try { await cancelCommissionForOrder(id) } catch (err) { logError(err, 'orders:cancel-commission') }
+  }
 
   // Audit log — record every status change
   if (statusChanged) {

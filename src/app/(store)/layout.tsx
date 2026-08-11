@@ -6,6 +6,7 @@ import { CartDrawer } from '@/components/store/CartDrawer'
 import { SearchModal } from '@/components/store/SearchModal'
 import { PWAInstaller } from '@/components/store/PWAInstaller'
 import { AnalyticsTracker } from '@/components/store/AnalyticsTracker'
+import { AffiliateTracker } from '@/components/store/AffiliateTracker'
 import { TopLoadingBar } from '@/components/store/TopLoadingBar'
 
 export const metadata: Metadata = {
@@ -28,6 +29,9 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
       <PWAInstaller />
       <Suspense fallback={null}>
         <AnalyticsTracker />
+      </Suspense>
+      <Suspense fallback={null}>
+        <AffiliateTracker />
       </Suspense>
     </div>
   )

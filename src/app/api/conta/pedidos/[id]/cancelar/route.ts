@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireCustomer } from '@/lib/customer-auth'
 import { prisma } from '@/lib/prisma'
+import { revokePointsForOrder } from '@/lib/loyalty'
+import { cancelCommissionForOrder } from '@/lib/affiliate'
+import { logError } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -78,6 +81,9 @@ export async function POST(req: NextRequest,
       })
     }
   })
+
+  try { await revokePointsForOrder(id) } catch (err) { logError(err, 'conta:pedidos:revoke-points') }
+  try { await cancelCommissionForOrder(id) } catch (err) { logError(err, 'conta:pedidos:cancel-commission') }
 
   return NextResponse.json({ ok: true, message: 'Pedido cancelado com sucesso.' })
 }

@@ -110,6 +110,47 @@ export async function awardPurchasePoints(customerId: string, totalAOA: number, 
   await addPoints(customerId, points, 'earned_purchase', `Compra #${orderId} — ${totalAOA} AOA`, orderId)
 }
 
+// ─── Reverter pontos de um pedido cancelado ───────────────────────────────────
+// Os pontos são atribuídos logo na criação do pedido (awardPurchasePoints).
+// Se o pedido for cancelado antes de ser pago/entregue, o cliente nunca
+// chegou a comprar — os pontos têm de ser devolvidos, tal como o stock.
+export async function revokePointsForOrder(orderId: string): Promise<void> {
+  const earned = await prisma.pointsTransaction.findFirst({
+    where: { orderId, type: 'earned_purchase' },
+  })
+  if (!earned) return
+
+  // Já foi revertido antes (evita duplicar se o cancelamento for reprocessado)
+  const alreadyReverted = await prisma.pointsTransaction.findFirst({
+    where: { orderId, type: 'adjusted', points: -earned.points },
+  })
+  if (alreadyReverted) return
+
+  const account = await prisma.loyaltyAccount.findUnique({ where: { customerId: earned.customerId } })
+  if (!account) return
+
+  const newTotal = Math.max(0, account.points - earned.points)
+  const config = await getConfig()
+  const newTier = calcTier(newTotal, config)
+
+  await prisma.$transaction([
+    prisma.loyaltyAccount.update({
+      where: { id: account.id },
+      data: { points: newTotal, tier: newTier },
+    }),
+    prisma.pointsTransaction.create({
+      data: {
+        customerId: earned.customerId,
+        loyaltyAccountId: account.id,
+        type: 'adjusted',
+        points: -earned.points,
+        description: `Pedido #${orderId} cancelado — pontos revertidos`,
+        orderId,
+      },
+    }),
+  ])
+}
+
 // ─── Config helpers ───────────────────────────────────────────────────────────
 
 export async function getConfig() {

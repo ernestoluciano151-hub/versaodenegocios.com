@@ -8,7 +8,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { error } = await requireAdmin(req)
+  const { error } = await requireAdmin(request)
   if (error) return error
 
   try {

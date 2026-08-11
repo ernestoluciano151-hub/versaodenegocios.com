@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
+import { getCustomerSession } from '@/lib/customer-auth'
 import { prisma } from '@/lib/prisma'
 import { rateLimit } from '@/lib/rate-limit'
 
@@ -15,14 +16,13 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const session = await auth()
-    const user = session?.user as { id?: string; type?: string } | undefined
+    const session = await getCustomerSession(req).catch(() => null)
     const body = await req.json()
 
     await prisma.analyticsEvent.create({
       data: {
         type: body.type,
-        customerId: user?.type === 'customer' ? (user.id ?? null) : null,
+        customerId: session?.id ?? null,
         sessionId: body.sessionId ?? null,
         productId: body.productId ?? null,
         orderId: body.orderId ?? null,
@@ -41,7 +41,8 @@ export async function POST(req: NextRequest) {
 
 // GET — analytics data for admin dashboard
 export async function GET(req: NextRequest) {
-
+  const { error: authError } = await requireAdmin(req)
+  if (authError) return authError
 
   const { searchParams } = new URL(req.url)
   const period = searchParams.get('period') ?? '7d'

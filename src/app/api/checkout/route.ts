@@ -4,6 +4,7 @@ import { getPaymentProvider } from '@/lib/payments'
 import { getCustomerSession } from '@/lib/customer-auth'
 import { sendOrderConfirmation, sendAdminNewOrder } from '@/lib/email'
 import { awardPurchasePoints } from '@/lib/loyalty'
+import { createCommissionForOrder } from '@/lib/affiliate'
 import { checkoutSchema } from '@/lib/validations'
 import { rateLimit } from '@/lib/rate-limit'
 import { logError } from '@/lib/logger'
@@ -311,6 +312,11 @@ export async function POST(req: NextRequest) {
       await awardPurchasePoints(customerId, total, order.id)
     } catch { /* loyalty failure must not block the order */ }
   }
+
+  // ── Comissão de afiliado (best-effort) ────────────────────────────────────
+  try {
+    await createCommissionForOrder(req, { orderId: order.id, customerId, total })
+  } catch (err) { logError(err, 'checkout:affiliate-commission') }
 
   // ── Emails (best-effort) ──────────────────────────────────────────────────
   try {
