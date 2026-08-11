@@ -39,6 +39,7 @@ enum PaymentStatus {
 enum PaymentMethodType {
   cash_on_delivery
   multicaixa_express
+  reference
   bank_transfer
   credit_card
   paypal

@@ -132,6 +132,20 @@ function BankCoordinatesModal({ bank, onClose }: { bank: BankAccount; onClose: (
   )
 }
 
+interface PaymentMethodMeta {
+  type: string
+  name: string
+  status: 'active' | 'inactive' | 'maintenance' | 'coming_soon'
+  description: string | null
+  sortOrder: number
+}
+
+const STATUS_BADGE_LABEL: Record<string, string> = {
+  coming_soon: 'Em breve',
+  maintenance: 'Em manutenção',
+  inactive: 'Indisponível',
+}
+
 export default function CheckoutPage() {
   const router = useRouter()
   const { items, getTotals, clearCart, couponCode } = useCartStore()
@@ -140,14 +154,38 @@ export default function CheckoutPage() {
   const [selectedBank, setSelectedBank] = useState<BankAccount | null>(null)
   const [showBankModal, setShowBankModal] = useState(false)
   const [error, setError] = useState('')
+  const [paymentMethods, setPaymentMethods] = useState<Record<string, PaymentMethodMeta> | null>(null)
   const totals = getTotals()
   const activeItems = items.filter((i) => !i.savedForLater)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { register, handleSubmit, watch, reset, formState: { errors } } = useForm<CheckoutFormData>({
+  const { register, handleSubmit, watch, reset, setValue, formState: { errors } } = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutFormSchema) as any,
     defaultValues: { paymentMethod: 'cash_on_delivery', country: 'Angola' },
   })
+
+  // Métodos de pagamento — reflecte o que o admin activou/mostrou em
+  // Configurações > Pagamentos. Um método só é seleccionável se existir
+  // aqui E tiver status 'active'; caso contrário aparece desactivado com
+  // um badge (ou nem aparece, se o admin desligou "Mostrar").
+  useEffect(() => {
+    fetch('/api/payment-methods')
+      .then(r => r.ok ? r.json() : [])
+      .then((list: PaymentMethodMeta[]) => {
+        const map = Object.fromEntries(list.map(m => [m.type, m]))
+        setPaymentMethods(map)
+        // Se o método actualmente seleccionado deixou de estar disponível,
+        // muda para o primeiro método activo.
+        const current = watch('paymentMethod')
+        const isUsable = (t: string) => map[t]?.status === 'active'
+        if (!isUsable(current)) {
+          const firstActive = list.find(m => m.status === 'active')
+          if (firstActive) setValue('paymentMethod', firstActive.type as CheckoutFormData['paymentMethod'])
+        }
+      })
+      .catch(() => setPaymentMethods({}))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Pre-fill from customer profile if logged in
   useEffect(() => {
@@ -183,6 +221,16 @@ export default function CheckoutPage() {
   }, [])
 
   const paymentMethod = watch('paymentMethod')
+
+  // Enquanto paymentMethods ainda não carregou, mostra tudo (evita flash de
+  // "sem opções"); depois de carregar, só mostra o que o admin marcou
+  // "Mostrar" e só permite seleccionar o que está "Activo".
+  const isMethodShown = (type: string) => paymentMethods === null || !!paymentMethods[type]
+  const isMethodActive = (type: string) => paymentMethods === null || paymentMethods[type]?.status === 'active'
+  const methodBadge = (type: string) => {
+    const status = paymentMethods?.[type]?.status
+    return status && status !== 'active' ? STATUS_BADGE_LABEL[status] ?? null : null
+  }
 
   // Buscar contas bancárias quando Transferência Bancária é seleccionada
   useEffect(() => {
@@ -307,22 +355,28 @@ export default function CheckoutPage() {
             <h2 className="font-semibold text-gray-900 mb-4">3. Forma de Pagamento</h2>
             <div className="space-y-3">
               {/* COD */}
-              <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${paymentMethod === 'cash_on_delivery' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                <input type="radio" value="cash_on_delivery" {...register('paymentMethod')} className="mt-0.5 accent-orange-500" />
+              {isMethodShown('cash_on_delivery') && (
+              <label className={`flex items-start gap-3 p-4 rounded-xl border-2 transition-colors ${!isMethodActive('cash_on_delivery') ? 'opacity-50 cursor-not-allowed border-gray-200' : 'cursor-pointer ' + (paymentMethod === 'cash_on_delivery' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300')}`}>
+                <input type="radio" value="cash_on_delivery" disabled={!isMethodActive('cash_on_delivery')} {...register('paymentMethod')} className="mt-0.5 accent-orange-500" />
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
                     <Truck className="w-5 h-5 text-orange-600" />
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">Pagamento na Entrega</p>
+                    <p className="font-medium text-gray-900 flex items-center gap-2">
+                      Pagamento na Entrega
+                      {methodBadge('cash_on_delivery') && <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">{methodBadge('cash_on_delivery')}</span>}
+                    </p>
                     <p className="text-sm text-gray-500">Pague em dinheiro quando receber a encomenda.</p>
                   </div>
                 </div>
               </label>
+              )}
 
               {/* Multicaixa Express via EMIS GPO iFrame */}
-              <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${paymentMethod === 'multicaixa_express' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                <input type="radio" value="multicaixa_express" {...register('paymentMethod')} className="mt-0.5 accent-orange-500" />
+              {isMethodShown('multicaixa_express') && (
+              <label className={`flex items-start gap-3 p-4 rounded-xl border-2 transition-colors ${!isMethodActive('multicaixa_express') ? 'opacity-50 cursor-not-allowed border-gray-200' : 'cursor-pointer ' + (paymentMethod === 'multicaixa_express' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300')}`}>
+                <input type="radio" value="multicaixa_express" disabled={!isMethodActive('multicaixa_express')} {...register('paymentMethod')} className="mt-0.5 accent-orange-500" />
                 <div className="flex items-center gap-3">
                   {/* Multicaixa Express logo */}
                   <div className="w-10 h-10 rounded-xl flex-shrink-0 overflow-hidden" style={{ background: '#E8540A' }}>
@@ -340,14 +394,18 @@ export default function CheckoutPage() {
                     </svg>
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">Multicaixa Express</p>
+                    <p className="font-medium text-gray-900 flex items-center gap-2">
+                      Multicaixa Express
+                      {methodBadge('multicaixa_express') && <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">{methodBadge('multicaixa_express')}</span>}
+                    </p>
                     <p className="text-sm text-gray-500">Pague com o seu telemóvel via Multicaixa Express.</p>
                   </div>
                 </div>
               </label>
+              )}
 
               {/* Nº de telemóvel MCX Express */}
-              {paymentMethod === 'multicaixa_express' && (
+              {paymentMethod === 'multicaixa_express' && isMethodActive('multicaixa_express') && (
                 <div className="ml-7 p-4 rounded-xl bg-orange-50 border border-orange-200">
                   <Label htmlFor="mcxPhone">Nº de telemóvel associado ao Multicaixa Express *</Label>
                   <Input
@@ -365,8 +423,9 @@ export default function CheckoutPage() {
               )}
 
               {/* Pagamento por Referência Multicaixa */}
-              <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${paymentMethod === 'reference' ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                <input type="radio" value="reference" {...register('paymentMethod')} className="mt-0.5 accent-red-500" />
+              {isMethodShown('reference') && (
+              <label className={`flex items-start gap-3 p-4 rounded-xl border-2 transition-colors ${!isMethodActive('reference') ? 'opacity-50 cursor-not-allowed border-gray-200' : 'cursor-pointer ' + (paymentMethod === 'reference' ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300')}`}>
+                <input type="radio" value="reference" disabled={!isMethodActive('reference')} {...register('paymentMethod')} className="mt-0.5 accent-red-500" />
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl flex-shrink-0 overflow-hidden bg-white border border-gray-100 flex items-center justify-center">
                     <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
@@ -377,15 +436,20 @@ export default function CheckoutPage() {
                     </svg>
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">Pagamento por Referência</p>
+                    <p className="font-medium text-gray-900 flex items-center gap-2">
+                      Pagamento por Referência
+                      {methodBadge('reference') && <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">{methodBadge('reference')}</span>}
+                    </p>
                     <p className="text-sm text-gray-500">Receba uma referência Multicaixa e pague no ATM, Internet Banking ou MCX Express.</p>
                   </div>
                 </div>
               </label>
+              )}
 
               {/* Transferência Bancária */}
-              <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${paymentMethod === 'bank_transfer' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                <input type="radio" value="bank_transfer" {...register('paymentMethod')} className="mt-0.5 accent-blue-500" />
+              {isMethodShown('bank_transfer') && (
+              <label className={`flex items-start gap-3 p-4 rounded-xl border-2 transition-colors ${!isMethodActive('bank_transfer') ? 'opacity-50 cursor-not-allowed border-gray-200' : 'cursor-pointer ' + (paymentMethod === 'bank_transfer' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300')}`}>
+                <input type="radio" value="bank_transfer" disabled={!isMethodActive('bank_transfer')} {...register('paymentMethod')} className="mt-0.5 accent-blue-500" />
                 <div className="flex items-center gap-3 flex-1">
                   {/* Bank Transfer icon */}
                   <div className="w-10 h-10 rounded-xl flex-shrink-0 overflow-hidden bg-white border border-gray-100">
@@ -414,14 +478,18 @@ export default function CheckoutPage() {
                     </svg>
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900">Transferência Bancária</p>
+                    <p className="font-medium text-gray-900 flex items-center gap-2">
+                      Transferência Bancária
+                      {methodBadge('bank_transfer') && <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">{methodBadge('bank_transfer')}</span>}
+                    </p>
                     <p className="text-sm text-gray-500">Transfira para a conta da empresa e envie o comprovativo.</p>
                   </div>
                 </div>
               </label>
+              )}
 
               {/* Selecção de banco quando Transferência Bancária está activa */}
-              {paymentMethod === 'bank_transfer' && (
+              {paymentMethod === 'bank_transfer' && isMethodActive('bank_transfer') && (
                 <div className="ml-2 pl-4 border-l-2 border-blue-200 space-y-2">
                   <p className="text-sm font-medium text-gray-700 mb-2">Seleccione o banco para ver as coordenadas:</p>
                   {bankAccounts.length === 0 ? (

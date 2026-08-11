@@ -8,6 +8,35 @@ async function safe<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
   try { return await fn() } catch { return fallback }
 }
 
+// Garante que os métodos de pagamento suportados pelo checkout têm sempre
+// uma linha na tabela payment_methods — sem isto, um método novo (ex.
+// "reference") nunca aparece no admin para poder ser gerido (activo /
+// em breve / manutenção / mostrar na loja).
+const DEFAULT_PAYMENT_METHODS: {
+  type: 'cash_on_delivery' | 'multicaixa_express' | 'reference' | 'bank_transfer'
+  name: string
+  status: 'active' | 'inactive' | 'maintenance' | 'coming_soon'
+  showInStore: boolean
+  description: string
+  sortOrder: number
+}[] = [
+  { type: 'cash_on_delivery', name: 'Pagamento na Entrega', status: 'active', showInStore: true, description: 'Pague em dinheiro quando receber a encomenda.', sortOrder: 0 },
+  { type: 'multicaixa_express', name: 'Multicaixa Express', status: 'coming_soon', showInStore: true, description: 'Pagamento directo via GPO (AppyPay/EasyPay) — aguarda activação pelo banco.', sortOrder: 1 },
+  { type: 'reference', name: 'Pagamento por Referência', status: 'coming_soon', showInStore: true, description: 'Referência Multicaixa para pagar no ATM/Internet Banking — aguarda acesso completo ao GPO.', sortOrder: 2 },
+  { type: 'bank_transfer', name: 'Transferência Bancária', status: 'active', showInStore: true, description: 'Transferência para a conta da empresa, com envio de comprovativo.', sortOrder: 3 },
+]
+
+async function ensurePaymentMethods() {
+  try {
+    const existing = await prisma.paymentMethod.findMany({ select: { type: true } })
+    const existingTypes = new Set(existing.map((m) => m.type))
+    const missing = DEFAULT_PAYMENT_METHODS.filter((m) => !existingTypes.has(m.type))
+    if (missing.length > 0) {
+      await prisma.paymentMethod.createMany({ data: missing, skipDuplicates: true })
+    }
+  } catch { /* tabela pode não existir ainda — ignorar */ }
+}
+
 const DEFAULT_STORE = {
   id: 'singleton', companyName: 'VN Commerce', country: 'Angola',
   currency: 'AOA', dateFormat: 'DD/MM/YYYY', timeFormat: 'HH:mm',
@@ -18,6 +47,8 @@ const DEFAULT_STORE = {
 }
 
 export default async function ConfiguracoesPage() {
+  await ensurePaymentMethods()
+
   const [
     storeSettings,
     socialSettings,

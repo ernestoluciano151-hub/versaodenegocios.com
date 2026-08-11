@@ -48,6 +48,21 @@ export async function POST(req: NextRequest) {
     mcxPhone, items, idempotencyKey,
   } = parsed.data
 
+  // ── Método de pagamento tem de estar activo e visível (Configurações → Pagamentos) ──
+  // Autoridade única: o que o admin configurar aqui é o que realmente vale —
+  // a UI do checkout já esconde/desactiva estas opções, mas isto impede que
+  // alguém contorne a UI e submeta directamente um método "Em Breve"/inactivo.
+  const paymentMethodConfig = await prisma.paymentMethod.findUnique({
+    where: { type: paymentMethod },
+    select: { status: true, showInStore: true },
+  }).catch(() => null)
+  if (paymentMethodConfig && (paymentMethodConfig.status !== 'active' || !paymentMethodConfig.showInStore)) {
+    return NextResponse.json(
+      { error: 'Este método de pagamento não está disponível de momento. Escolha outro método.' },
+      { status: 400 },
+    )
+  }
+
   // ── Idempotency check (DB-backed — works across all serverless instances) ──
   if (idempotencyKey) {
     const existing = await prisma.order.findUnique({
