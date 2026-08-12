@@ -7,7 +7,9 @@ import { SearchModal } from '@/components/store/SearchModal'
 import { PWAInstaller } from '@/components/store/PWAInstaller'
 import { AnalyticsTracker } from '@/components/store/AnalyticsTracker'
 import { AffiliateTracker } from '@/components/store/AffiliateTracker'
+import { TrackingScripts } from '@/components/store/TrackingScripts'
 import { TopLoadingBar } from '@/components/store/TopLoadingBar'
+import { prisma } from '@/lib/prisma'
 
 export const metadata: Metadata = {
   title: { default: 'VN Commerce — Produtos Eletrónicos', template: '%s | VN Commerce' },
@@ -15,9 +17,12 @@ export const metadata: Metadata = {
   openGraph: { type: 'website', locale: 'pt_AO', siteName: 'VN Commerce' },
 }
 
-export default function StoreLayout({ children }: { children: React.ReactNode }) {
+export default async function StoreLayout({ children }: { children: React.ReactNode }) {
+  const trackingSettings = await prisma.analyticsSettings.findUnique({ where: { id: 'singleton' } }).catch(() => null)
+
   return (
     <div className="flex flex-col min-h-screen">
+      <TrackingScripts settings={trackingSettings} />
       <Suspense fallback={null}>
         <TopLoadingBar />
       </Suspense>
