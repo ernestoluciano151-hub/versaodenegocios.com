@@ -220,6 +220,26 @@ export default function CheckoutPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Captura o nome/email/telefone à medida que o cliente os preenche, mesmo
+  // que nunca conclua a compra — permite ao admin fazer follow-up de
+  // carrinhos abandonados por visitantes não autenticados (antes, ficavam
+  // sempre como "Visitante anónimo" sem nenhum contacto).
+  const watchedName = watch('name')
+  const watchedEmail = watch('email')
+  const watchedPhone = watch('phone')
+  useEffect(() => {
+    if (!watchedName && !watchedEmail && !watchedPhone) return
+    const t = setTimeout(() => {
+      fetch('/api/cart/contact', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: watchedName, email: watchedEmail, phone: watchedPhone }),
+        keepalive: true,
+      }).catch(() => {})
+    }, 1000)
+    return () => clearTimeout(t)
+  }, [watchedName, watchedEmail, watchedPhone])
+
   const paymentMethod = watch('paymentMethod')
 
   // Enquanto paymentMethods ainda não carregou, mostra tudo (evita flash de

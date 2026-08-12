@@ -25,7 +25,13 @@ export async function GET(req: NextRequest) {
   const [carts, total] = await Promise.all([
     prisma.cart.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        sessionId: true,
+        guestName: true,
+        guestEmail: true,
+        guestPhone: true,
+        updatedAt: true,
         customer: { select: { id: true, name: true, email: true, phone: true } },
         items: {
           include: {

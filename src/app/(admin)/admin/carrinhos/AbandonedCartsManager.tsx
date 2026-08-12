@@ -20,8 +20,19 @@ interface Cart {
   id: string
   sessionId: string | null
   updatedAt: string
+  guestName: string | null
+  guestEmail: string | null
+  guestPhone: string | null
   customer: { id: string; name: string; email: string; phone: string | null } | null
   items: CartItem[]
+}
+
+/** Normaliza um número de telemóvel angolano para o formato wa.me (só dígitos, com indicativo 244) */
+function toWhatsAppNumber(phone: string): string {
+  const digits = phone.replace(/\D/g, '')
+  if (digits.startsWith('244')) return digits
+  if (digits.startsWith('0')) return `244${digits.slice(1)}`
+  return `244${digits}`
 }
 
 interface ApiResponse {
@@ -97,7 +108,7 @@ export function AbandonedCartsManager() {
                 className="w-full flex items-center gap-4 p-4 text-left hover:bg-gray-50 transition-colors"
               >
                 <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0">
-                  {cart.customer ? (
+                  {cart.customer || cart.guestName || cart.guestEmail || cart.guestPhone ? (
                     <User className="w-5 h-5 text-orange-500" />
                   ) : (
                     <ShoppingCart className="w-5 h-5 text-gray-400" />
@@ -105,10 +116,11 @@ export function AbandonedCartsManager() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-gray-900 truncate">
-                    {cart.customer?.name ?? 'Visitante anónimo'}
+                    {cart.customer?.name ?? cart.guestName ?? 'Visitante anónimo'}
                   </p>
                   <p className="text-xs text-gray-500 truncate">
-                    {cart.customer?.email ?? (cart.sessionId ? `Sessão: ${cart.sessionId.slice(0, 12)}…` : 'Sem identificação')}
+                    {cart.customer?.email ?? cart.guestEmail ?? cart.guestPhone
+                      ?? (cart.sessionId ? `Sessão: ${cart.sessionId.slice(0, 12)}…` : 'Sem identificação')}
                   </p>
                 </div>
                 <div className="text-right flex-shrink-0">
@@ -148,14 +160,32 @@ export function AbandonedCartsManager() {
                       </p>
                     </div>
                   ))}
-                  {cart.customer?.email && (
-                    <a
-                      href={`mailto:${cart.customer.email}?subject=O seu carrinho VN Commerce está à sua espera&body=Olá ${cart.customer.name},%0A%0AVimos que deixou alguns artigos no seu carrinho. Ainda está interessado?%0A%0AClique aqui para finalizar a compra: https://www.versaodenegocios.com/carrinho%0A%0AObrigado,%0AEquipa VN Commerce`}
-                      className="inline-flex items-center gap-2 text-sm text-orange-500 hover:text-orange-600 font-medium mt-1"
-                    >
-                      Enviar email de recuperação →
-                    </a>
+                  {(cart.customer?.phone ?? cart.guestPhone) && (
+                    <p className="text-xs text-gray-500">
+                      Telefone: <span className="font-medium text-gray-700">{cart.customer?.phone ?? cart.guestPhone}</span>
+                    </p>
                   )}
+
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1">
+                    {(cart.customer?.email ?? cart.guestEmail) && (
+                      <a
+                        href={`mailto:${cart.customer?.email ?? cart.guestEmail}?subject=O seu carrinho VN Commerce está à sua espera&body=Olá ${cart.customer?.name ?? cart.guestName ?? ''},%0A%0AVimos que deixou alguns artigos no seu carrinho. Ainda está interessado?%0A%0AClique aqui para finalizar a compra: https://www.versaodenegocios.com/carrinho%0A%0AObrigado,%0AEquipa VN Commerce`}
+                        className="inline-flex items-center gap-2 text-sm text-orange-500 hover:text-orange-600 font-medium"
+                      >
+                        Enviar email de recuperação →
+                      </a>
+                    )}
+                    {(cart.customer?.phone ?? cart.guestPhone) && (
+                      <a
+                        href={`https://wa.me/${toWhatsAppNumber((cart.customer?.phone ?? cart.guestPhone)!)}?text=${encodeURIComponent(`Olá ${cart.customer?.name ?? cart.guestName ?? ''}! Vimos que deixou alguns artigos no carrinho na VN Commerce. Ainda tem interesse? https://www.versaodenegocios.com/carrinho`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-sm text-green-600 hover:text-green-700 font-medium"
+                      >
+                        Contactar via WhatsApp →
+                      </a>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
