@@ -8,6 +8,8 @@ import { PWAInstaller } from '@/components/store/PWAInstaller'
 import { AnalyticsTracker } from '@/components/store/AnalyticsTracker'
 import { AffiliateTracker } from '@/components/store/AffiliateTracker'
 import { TrackingScripts } from '@/components/store/TrackingScripts'
+import { PixelRouteTracker } from '@/components/store/PixelRouteTracker'
+import { UserDataSync } from '@/components/store/UserDataSync'
 import { TopLoadingBar } from '@/components/store/TopLoadingBar'
 import { prisma } from '@/lib/prisma'
 
@@ -46,6 +48,10 @@ export default async function StoreLayout({ children }: { children: React.ReactN
       <Suspense fallback={null}>
         <AffiliateTracker />
       </Suspense>
+      <Suspense fallback={null}>
+        <PixelRouteTracker />
+      </Suspense>
+      <UserDataSync />
     </div>
   )
 }

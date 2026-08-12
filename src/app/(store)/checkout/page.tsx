@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { formatCurrency } from '@/lib/utils'
 import { checkoutFormSchema, type CheckoutFormData } from '@/lib/validations'
 import Image from 'next/image'
+import { track, toNumber, CURRENCY } from '@/lib/metaPixel'
 
 interface BankAccount {
   id: string; bankName: string; accountHolder: string; label?: string
@@ -158,6 +159,23 @@ export default function CheckoutPage() {
   const totals = getTotals()
   const activeItems = items.filter((i) => !i.savedForLater)
 
+  // Meta Pixel — InitiateCheckout, uma vez ao entrar nesta página com itens
+  // no carrinho. Cobre tanto quem passou pelo carrinho normal como quem veio
+  // do botão "Comprar Agora" (que só dispara AddToCart e navega para aqui —
+  // evita duplicar o InitiateCheckout nesse fluxo).
+  useEffect(() => {
+    if (activeItems.length === 0) return
+    track('InitiateCheckout', {
+      content_ids: activeItems.map((i) => i.slug),
+      content_type: 'product',
+      contents: activeItems.map((i) => ({ id: i.slug, quantity: i.quantity })),
+      num_items: activeItems.reduce((s, i) => s + i.quantity, 0),
+      value: totals.total,
+      currency: CURRENCY,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { register, handleSubmit, watch, reset, setValue, formState: { errors } } = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutFormSchema) as any,
@@ -282,6 +300,33 @@ export default function CheckoutPage() {
       })
       const result = await res.json()
       if (!res.ok) throw new Error(result.error ?? 'Erro ao processar pedido.')
+
+      // Meta Pixel — Purchase, no momento em que o pedido é feito (não
+      // esperamos pela entrega nem pela confirmação de pagamento, porque
+      // é este o único momento comum aos 4 métodos de pagamento e aos 3
+      // destinos possíveis depois do checkout). Trava por sessionStorage
+      // evita duplicar caso o idempotencyKey devolva um pedido já existente
+      // (retry de rede) ou o utilizador volte atrás e reenvie.
+      if (result.orderId) {
+        const dedupeKey = `fb_purchase_${result.orderId}`
+        if (!sessionStorage.getItem(dedupeKey)) {
+          sessionStorage.setItem(dedupeKey, '1')
+          track('Purchase', {
+            content_ids: activeItems.map((i) => i.slug),
+            content_type: 'product',
+            contents: activeItems.map((i) => ({
+              id: i.slug,
+              quantity: i.quantity,
+              item_price: toNumber(i.salePrice ?? i.price),
+            })),
+            num_items: activeItems.reduce((s, i) => s + i.quantity, 0),
+            value: totals.total,
+            currency: CURRENCY,
+            order_id: result.orderId,
+          }, `purchase-${result.orderId}`)
+        }
+      }
+
       clearCart()
       // Multicaixa Express: aguardar aprovação do push na app MCX Express
       if (result.awaitApproval || result.iframeUrl) {

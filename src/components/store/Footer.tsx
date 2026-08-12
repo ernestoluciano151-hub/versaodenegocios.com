@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { MapPin, Phone, Mail, MessageCircle } from 'lucide-react'
+import { WhatsAppContactLink } from './WhatsAppContactLink'
 
 const WHATSAPP_NUMBER = '244936902736'
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}`
@@ -66,18 +67,29 @@ export function Footer() {
             </p>
             {/* Social links */}
             <div className="flex gap-2 flex-wrap">
-              {socialLinks.map((s) => (
-                <a
-                  key={s.label}
-                  href={s.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={s.label}
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center text-white transition-opacity hover:opacity-80 ${s.bg}`}
-                >
-                  {s.icon}
-                </a>
-              ))}
+              {socialLinks.map((s) =>
+                s.label === 'WhatsApp' ? (
+                  <WhatsAppContactLink
+                    key={s.label}
+                    href={s.href}
+                    aria-label={s.label}
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center text-white transition-opacity hover:opacity-80 ${s.bg}`}
+                  >
+                    {s.icon}
+                  </WhatsAppContactLink>
+                ) : (
+                  <a
+                    key={s.label}
+                    href={s.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={s.label}
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center text-white transition-opacity hover:opacity-80 ${s.bg}`}
+                  >
+                    {s.icon}
+                  </a>
+                )
+              )}
             </div>
           </div>
 
@@ -137,14 +149,9 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-2">
                 <MessageCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
-                <a
-                  href={WHATSAPP_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-green-400 transition-colors"
-                >
+                <WhatsAppContactLink href={WHATSAPP_URL} className="hover:text-green-400 transition-colors">
                   WhatsApp
-                </a>
+                </WhatsAppContactLink>
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-orange-400 flex-shrink-0" />

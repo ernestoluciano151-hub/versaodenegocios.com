@@ -10,6 +10,7 @@ import { AddToCartSection } from './AddToCartSection'
 import { ProductGallery } from './ProductGallery'
 import { Shield, Truck, Globe, Tag, ChevronRight, Home } from 'lucide-react'
 import { ProductReviews } from './ProductReviews'
+import { ProductViewTracker } from '@/components/store/ProductViewTracker'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
@@ -122,6 +123,13 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
           {/* SKU */}
           <p className="text-xs text-gray-400 mb-4">SKU: {product.sku} {product.internalCode && `· Ref: ${product.internalCode}`}</p>
+
+          <ProductViewTracker
+            contentId={product.slug}
+            name={product.name}
+            category={product.category?.name ?? null}
+            value={Number(product.salePrice ?? product.price)}
+          />
 
           {/* Add to cart */}
           <AddToCartSection product={{

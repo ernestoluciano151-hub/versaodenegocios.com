@@ -9,6 +9,7 @@ import { useUIStore } from '@/store/ui'
 import { formatCurrency, calculateDiscount } from '@/lib/utils'
 import { memo, useCallback } from 'react'
 import { trackEvent } from '@/components/store/AnalyticsTracker'
+import { track, CURRENCY } from '@/lib/metaPixel'
 
 interface ProductCardProps {
   id: string
@@ -40,6 +41,14 @@ export const ProductCard = memo(function ProductCard({
     addItem({ id, productId: id, name, brand, slug, image, price, salePrice: salePrice ?? undefined, quantity: 1, stock })
     openCart()
     trackEvent('add_to_cart', { productId: id })
+    track('AddToCart', {
+      content_ids: [slug],
+      content_type: 'product',
+      content_name: name,
+      contents: [{ id: slug, quantity: 1 }],
+      value: salePrice ?? price,
+      currency: CURRENCY,
+    })
   }, [id, name, brand, slug, image, price, salePrice, stock, addItem, openCart])
 
   return (

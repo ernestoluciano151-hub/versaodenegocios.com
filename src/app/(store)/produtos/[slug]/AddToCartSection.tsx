@@ -5,6 +5,7 @@ import { ShoppingCart, Heart, Zap, Minus, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useCartStore } from '@/store/cart'
 import { useUIStore } from '@/store/ui'
+import { track, CURRENCY } from '@/lib/metaPixel'
 
 interface Product {
   id: string
@@ -35,10 +36,21 @@ export function AddToCartSection({ product }: { product: Product }) {
       quantity,
       stock: product.stock,
     })
+    track('AddToCart', {
+      content_ids: [product.slug],
+      content_type: 'product',
+      content_name: product.name,
+      contents: [{ id: product.slug, quantity }],
+      value: (product.salePrice ?? product.price) * quantity,
+      currency: CURRENCY,
+    })
     openCart()
   }
 
   function handleBuyNow() {
+    // Dispara AddToCart aqui; InitiateCheckout dispara ao chegar a /checkout
+    // (mesma lógica que cobre quem passou pelo carrinho normal) — assim
+    // evitamos disparar InitiateCheckout duas vezes para este fluxo.
     handleAddToCart()
     window.location.href = '/checkout'
   }
