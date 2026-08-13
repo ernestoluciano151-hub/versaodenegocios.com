@@ -60,11 +60,11 @@ const nextConfig: NextConfig = {
               "default-src 'self'",
               // 'unsafe-inline' is required by Next.js for inline <script> chunks until nonce-based CSP is adopted.
               // 'unsafe-eval' has been removed — it was not needed and allowed arbitrary code execution.
-              "script-src 'self' 'unsafe-inline' https://accounts.google.com",
+              "script-src 'self' 'unsafe-inline' https://accounts.google.com https://connect.facebook.net",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
-              "img-src 'self' data: blob: https://res.cloudinary.com https://via.placeholder.com https://images.unsplash.com https://cdn.shopify.com https://lh3.googleusercontent.com https://avatars.githubusercontent.com",
-              "connect-src 'self' https://accounts.google.com https://res.cloudinary.com https://api.multicaixaexpress.ao https://*.emis.co.ao",
+              "img-src 'self' data: blob: https://res.cloudinary.com https://via.placeholder.com https://images.unsplash.com https://cdn.shopify.com https://lh3.googleusercontent.com https://avatars.githubusercontent.com https://www.facebook.com https://connect.facebook.net",
+              "connect-src 'self' https://accounts.google.com https://res.cloudinary.com https://api.multicaixaexpress.ao https://*.emis.co.ao https://www.facebook.com https://connect.facebook.net",
               "frame-src 'self' https://accounts.google.com https://checkout.multicaixaexpress.ao https://*.emis.co.ao",
               "form-action 'self' https://accounts.google.com",
               "base-uri 'self'",
