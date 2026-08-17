@@ -125,12 +125,12 @@ async function CustomersTable({ search, status }: { search?: string; status: Sta
             <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Risco</th>
             <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Estado</th>
             <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Desde</th>
-            <th className="py-3 px-4" />
+            <th className="py-3 px-4 sticky right-0 bg-gray-50" />
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
           {customers.map((c) => (
-            <tr key={c.id} className="hover:bg-gray-50">
+            <tr key={c.id} className="hover:bg-gray-50 group">
               <td className="py-3 px-4">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 text-xs font-bold flex-shrink-0">
@@ -165,7 +165,7 @@ async function CustomersTable({ search, status }: { search?: string; status: Sta
                 </div>
               </td>
               <td className="py-3 px-4 text-xs text-gray-400">{formatDate(c.createdAt)}</td>
-              <td className="py-3 px-4">
+              <td className="py-3 px-4 sticky right-0 bg-white group-hover:bg-gray-50 shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.08)]">
                 <Link href={`/admin/clientes/${c.id}`}>
                   <Button size="sm" variant="ghost"><Eye className="w-4 h-4" /></Button>
                 </Link>

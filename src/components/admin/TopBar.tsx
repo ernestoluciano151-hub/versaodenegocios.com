@@ -37,8 +37,8 @@ export function TopBar({ title, userName = 'Admin', userEmail, actions }: TopBar
         >
           <Menu className="w-5 h-5" />
         </button>
-        <h1 className="text-lg font-semibold text-gray-900">{title}</h1>
-        {actions && <div className="hidden sm:block">{actions}</div>}
+        <h1 className="text-lg font-semibold text-gray-900 truncate">{title}</h1>
+        {actions && <div className="flex-shrink-0">{actions}</div>}
       </div>
 
       <div className="flex items-center gap-2">

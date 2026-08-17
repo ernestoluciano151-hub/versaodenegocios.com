@@ -72,12 +72,12 @@ async function OrdersTable({ status, search, page }: { status?: string; search?:
               <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Pagamento</th>
               <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Total</th>
               <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Data</th>
-              <th className="py-3 px-4" />
+              <th className="py-3 px-4 sticky right-0 bg-gray-50" />
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {orders.map((order) => (
-              <tr key={order.id} className="hover:bg-gray-50">
+              <tr key={order.id} className="hover:bg-gray-50 group">
                 <td className="py-3 px-4 font-mono text-xs font-semibold text-gray-700">
                   #{order.id.slice(-8).toUpperCase()}
                 </td>
@@ -95,7 +95,7 @@ async function OrdersTable({ status, search, page }: { status?: string; search?:
                 </td>
                 <td className="py-3 px-4 font-medium text-gray-900">{formatCurrency(Number(order.total))}</td>
                 <td className="py-3 px-4 text-xs text-gray-400">{formatDate(order.createdAt)}</td>
-                <td className="py-3 px-4">
+                <td className="py-3 px-4 sticky right-0 bg-white group-hover:bg-gray-50 shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.08)]">
                   <Link href={`/admin/pedidos/${order.id}`}>
                     <Button size="sm" variant="ghost"><Eye className="w-4 h-4" /></Button>
                   </Link>

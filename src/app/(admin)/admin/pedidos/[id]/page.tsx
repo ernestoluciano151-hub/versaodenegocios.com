@@ -39,7 +39,7 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
           {/* Order items */}
           <div className="lg:col-span-2 space-y-4">
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <div className="px-5 py-4 border-b border-gray-100 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h2 className="font-semibold text-gray-900">Itens do Pedido</h2>
                 <OrderStatusSelect orderId={order.id} currentStatus={order.status as OrderStatus} currentTrackingNumber={(order as { trackingNumber?: string | null }).trackingNumber} />
               </div>

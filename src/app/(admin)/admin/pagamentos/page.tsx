@@ -7,6 +7,7 @@ import { PaymentStatusBadge } from '@/components/admin/OrderStatusBadge'
 import { Badge } from '@/components/ui/badge'
 import { PAYMENT_METHOD_LABELS, type PaymentStatus, type PaymentMethodType } from '@/types'
 import { ConfirmPaymentButton } from './ConfirmPaymentButton'
+import { CancelPaymentButton } from './CancelPaymentButton'
 
 async function getPayments(status?: string) {
   return prisma.payment.findMany({
@@ -26,6 +27,7 @@ const statusOptions = [
   { value: 'awaiting_delivery', label: 'Aguardando Entrega' },
   { value: 'paid', label: 'Pagos' },
   { value: 'failed', label: 'Falhados' },
+  { value: 'cancelled', label: 'Cancelados' },
   { value: 'refunded', label: 'Reembolsados' },
 ]
 
@@ -46,12 +48,12 @@ async function PaymentsTable({ status }: { status?: string }) {
             <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Valor</th>
             <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Estado</th>
             <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Data</th>
-            <th className="py-3 px-4" />
+            <th className="py-3 px-4 sticky right-0 bg-gray-50" />
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
           {payments.map((payment) => (
-            <tr key={payment.id} className="hover:bg-gray-50">
+            <tr key={payment.id} className="hover:bg-gray-50 group">
               <td className="py-3 px-4 font-mono text-xs text-gray-500">
                 {payment.transactionReference?.slice(0, 20) ?? '—'}
               </td>
@@ -78,10 +80,15 @@ async function PaymentsTable({ status }: { status?: string }) {
               <td className="py-3 px-4 text-xs text-gray-400">
                 {payment.paymentDate ? formatDate(payment.paymentDate) : formatDate(payment.createdAt)}
               </td>
-              <td className="py-3 px-4">
-                {(payment.paymentStatus === 'pending' || payment.paymentStatus === 'awaiting_delivery') && (
-                  <ConfirmPaymentButton paymentId={payment.id} />
-                )}
+              <td className="py-3 px-4 sticky right-0 bg-white group-hover:bg-gray-50 shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.08)]">
+                <div className="flex flex-wrap gap-2">
+                  {(payment.paymentStatus === 'pending' || payment.paymentStatus === 'awaiting_delivery') && (
+                    <ConfirmPaymentButton paymentId={payment.id} />
+                  )}
+                  {(payment.paymentStatus === 'pending' || payment.paymentStatus === 'awaiting_delivery' || payment.paymentStatus === 'failed') && (
+                    <CancelPaymentButton paymentId={payment.id} />
+                  )}
+                </div>
               </td>
             </tr>
           ))}
