@@ -115,7 +115,7 @@ async function CustomersTable({ search, status }: { search?: string; status: Sta
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+      <table className="w-full min-w-[960px] text-sm">
         <thead className="border-b border-gray-200 bg-gray-50">
           <tr>
             <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Cliente</th>
