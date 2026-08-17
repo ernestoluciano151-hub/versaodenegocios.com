@@ -97,7 +97,7 @@ async function OrdersTable({ status, search, page }: { status?: string; search?:
                 <td className="py-3 px-4 text-xs text-gray-400">{formatDate(order.createdAt)}</td>
                 <td className="py-3 px-4 sticky right-0 bg-white group-hover:bg-gray-50 shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.08)]">
                   <Link href={`/admin/pedidos/${order.id}`}>
-                    <Button size="sm" variant="ghost"><Eye className="w-4 h-4" /></Button>
+                    <Button size="sm" variant="ghost" className="text-black hover:text-black"><Eye className="w-4 h-4" strokeWidth={2.25} /></Button>
                   </Link>
                 </td>
               </tr>
