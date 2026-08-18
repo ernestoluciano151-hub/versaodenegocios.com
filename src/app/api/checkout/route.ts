@@ -333,7 +333,7 @@ export async function POST(req: NextRequest) {
       }),
       sendAdminNewOrder({ orderId: order.id, customerName: name, total }),
     ])
-  } catch { /* email failure must not block the order */ }
+  } catch (err) { logError(err, 'checkout:send-email') /* email failure must not block the order */ }
 
   // Dados de referência Multicaixa (método 'reference')
   const gw = paymentResult.gatewayResponse as

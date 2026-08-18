@@ -1,11 +1,64 @@
 import { Resend } from 'resend'
+import { prisma } from '@/lib/prisma'
+import { logError } from '@/lib/logger'
 
-function getResend() {
-  return new Resend(process.env.RESEND_API_KEY ?? 'placeholder')
+const SINGLETON_ID = 'singleton'
+const APP_NAME = 'VN Commerce'
+
+/**
+ * Resolve a configuração de email a partir da BD (Configurações → Email,
+ * gerido pelo admin) com fallback para as variáveis de ambiente
+ * RESEND_API_KEY / EMAIL_FROM. Antes desta correcção, este ficheiro lia
+ * SEMPRE das variáveis de ambiente e ignorava por completo o que o admin
+ * configurava no painel — exactamente o mesmo tipo de bug já corrigido
+ * noutras áreas (Analytics, Métodos de Pagamento): a configuração existia
+ * na UI mas nunca chegava a ser usada.
+ */
+async function resolveEmailConfig(): Promise<{ apiKey: string; from: string }> {
+  const settings = await prisma.emailSettings.findUnique({ where: { id: SINGLETON_ID } }).catch(() => null)
+
+  const apiKey = settings?.apiKey || process.env.RESEND_API_KEY || ''
+  const fromEmail = settings?.fromEmail || process.env.EMAIL_FROM || 'noreply@versaodenegocios.com'
+  const fromName = settings?.fromName || APP_NAME
+
+  return { apiKey, from: `${fromName} <${fromEmail}>` }
 }
 
-const FROM = process.env.EMAIL_FROM ?? 'noreply@versaodenegocios.com'
-const APP_NAME = 'VN Commerce'
+interface SendPayload {
+  to: string | string[]
+  subject: string
+  html: string
+  replyTo?: string
+}
+
+/**
+ * Envio central de email. Antes, cada chamador ignorava o campo `error` que
+ * a Resend devolve (a SDK NÃO lança excepção em falhas da API — chave
+ * inválida, domínio não verificado, etc. — devolve { data: null, error }).
+ * Como nenhum código verificava esse campo, todos os blocos try/catch
+ * existentes nunca detectavam a falha: os emails simplesmente não saíam,
+ * sem qualquer erro visível. Agora verificamos sempre `error`, registamos
+ * com logError (visível nos logs da Vercel) e lançamos excepção real, para
+ * que o try/catch dos chamadores passe a funcionar como esperado.
+ */
+async function sendEmail(payload: SendPayload): Promise<void> {
+  const { apiKey, from } = await resolveEmailConfig()
+
+  if (!apiKey) {
+    const err = new Error('Serviço de email não configurado — falta a API Key da Resend (Configurações → Email ou variável RESEND_API_KEY).')
+    logError(err, 'email:no-api-key')
+    throw err
+  }
+
+  const resend = new Resend(apiKey)
+  const { error } = await resend.emails.send({ from, ...payload })
+
+  if (error) {
+    const err = new Error(`Falha ao enviar email (${error.name}): ${error.message}`)
+    logError(err, 'email:send-failed')
+    throw err
+  }
+}
 
 export async function sendOrderConfirmation(to: string, order: {
   id: string
@@ -17,8 +70,7 @@ export async function sendOrderConfirmation(to: string, order: {
     .map(i => `<tr><td>${i.name}</td><td>${i.quantity}</td><td>Kz ${i.price.toFixed(2)}</td></tr>`)
     .join('')
 
-  return getResend().emails.send({
-    from: `${APP_NAME} <${FROM}>`,
+  return sendEmail({
     to,
     subject: `Pedido #${order.id.slice(-8).toUpperCase()} recebido — ${APP_NAME}`,
     html: `
@@ -40,8 +92,7 @@ export async function sendOrderStatusUpdate(to: string, data: {
   status: string
   message: string
 }) {
-  return getResend().emails.send({
-    from: `${APP_NAME} <${FROM}>`,
+  return sendEmail({
     to,
     subject: `Actualização do pedido #${data.orderId.slice(-8).toUpperCase()} — ${APP_NAME}`,
     html: `
@@ -59,8 +110,7 @@ export async function sendCartAbandonmentEmail(to: string, data: {
 }) {
   const itemsHtml = data.cartItems.map(i => `<li>${i.name} — Kz ${i.price.toFixed(2)}</li>`).join('')
 
-  return getResend().emails.send({
-    from: `${APP_NAME} <${FROM}>`,
+  return sendEmail({
     to,
     subject: `Esqueceu-se de algo? — ${APP_NAME}`,
     html: `
@@ -80,8 +130,7 @@ export async function sendContactEmail(to: string, data: {
   subject?: string
   message: string
 }) {
-  return getResend().emails.send({
-    from: `${APP_NAME} <${FROM}>`,
+  return sendEmail({
     to,
     replyTo: data.email,
     subject: `[Contacto] ${data.subject?.trim() || 'Nova mensagem'} — ${data.name}`,
@@ -101,8 +150,7 @@ export async function sendOrderShippedEmail(to: string, data: {
   orderId: string
   trackingNumber?: string
 }) {
-  return getResend().emails.send({
-    from: `${APP_NAME} <${FROM}>`,
+  return sendEmail({
     to,
     subject: `Pedido #${data.orderId.slice(-8).toUpperCase()} enviado — ${APP_NAME}`,
     html: `
@@ -121,15 +169,41 @@ export async function sendAdminNewOrder(data: {
   customerName: string
   total: number
 }) {
-  const adminEmail = process.env.ADMIN_EMAIL ?? FROM
-  return getResend().emails.send({
-    from: `${APP_NAME} <${FROM}>`,
+  const settings = await prisma.emailSettings.findUnique({ where: { id: SINGLETON_ID } }).catch(() => null)
+  const adminEmail = settings?.salesEmail || process.env.ADMIN_EMAIL || settings?.fromEmail || process.env.EMAIL_FROM || 'noreply@versaodenegocios.com'
+
+  return sendEmail({
     to: adminEmail,
     subject: `Novo pedido #${data.orderId.slice(-8).toUpperCase()} — Kz ${data.total.toFixed(2)}`,
     html: `
       <h1>Novo pedido recebido!</h1>
       <p>Cliente: <strong>${data.customerName}</strong></p>
       <p>Total: <strong>Kz ${data.total.toFixed(2)}</strong></p>
+    `,
+  })
+}
+
+export async function sendPasswordResetEmail(to: string, data: {
+  customerName: string
+  resetUrl: string
+}) {
+  return sendEmail({
+    to,
+    subject: `Recuperação de palavra-passe — ${APP_NAME}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
+        <h2 style="color:#111">Recuperar palavra-passe</h2>
+        <p>Olá, <strong>${data.customerName}</strong>!</p>
+        <p>Recebemos um pedido para recuperar a palavra-passe da sua conta.</p>
+        <p>Clique no botão abaixo para definir uma nova palavra-passe. O link é válido durante <strong>1 hora</strong>.</p>
+        <a href="${data.resetUrl}"
+          style="display:inline-block;background:#f97316;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;margin:16px 0">
+          Redefinir palavra-passe
+        </a>
+        <p style="color:#666;font-size:13px">Se não pediu a recuperação, pode ignorar este email.</p>
+        <hr style="border:none;border-top:1px solid #eee;margin:24px 0"/>
+        <p style="color:#999;font-size:12px">${APP_NAME} — Produtos Eletrónicos</p>
+      </div>
     `,
   })
 }

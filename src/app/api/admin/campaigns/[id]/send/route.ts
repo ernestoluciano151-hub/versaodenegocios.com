@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import { Resend } from 'resend'
-
-const resend = new Resend(process.env.RESEND_API_KEY)
-const FROM = process.env.EMAIL_FROM ?? 'onboarding@resend.dev'
+import { logError } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,14 +21,28 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: 'Sem subscritores activos' }, { status: 400 })
   }
 
+  // Configuração de email vem de Configurações → Email (BD), com fallback
+  // para as variáveis de ambiente — mesma fonte usada pelo resto do site,
+  // em vez de ler sempre e só a variável de ambiente.
+  const settings = await prisma.emailSettings.findUnique({ where: { id: 'singleton' } }).catch(() => null)
+  const apiKey = settings?.apiKey || process.env.RESEND_API_KEY
+  if (!apiKey) {
+    return NextResponse.json({ error: 'Serviço de email não configurado (Configurações → Email).' }, { status: 400 })
+  }
+  const fromEmail = settings?.fromEmail || process.env.EMAIL_FROM || 'onboarding@resend.dev'
+  const fromName = settings?.fromName || 'VN Commerce'
+  const resend = new Resend(apiKey)
+  const FROM = `${fromName} <${fromEmail}>`
+
   // Send in batches of 50 (Resend batch limit)
   const batchSize = 50
   let sent = 0
+  let failedBatches = 0
   for (let i = 0; i < subscribers.length; i += batchSize) {
     const batch = subscribers.slice(i, i + batchSize)
-    await resend.batch.send(
+    const { error: batchError } = await resend.batch.send(
       batch.map(sub => ({
-        from: `VN Commerce <${FROM}>`,
+        from: FROM,
         to: sub.email,
         subject: campaign.subject,
         html: `
@@ -44,13 +56,28 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         `,
       }))
     )
-    sent += batch.length
+    if (batchError) {
+      failedBatches++
+      logError(new Error(`${batchError.name}: ${batchError.message}`), 'campaigns:send-batch-failed')
+    } else {
+      sent += batch.length
+    }
   }
 
   const updated = await prisma.campaign.update({
     where: { id },
     data: { status: 'sent', sentAt: new Date(), recipientCount: sent },
   })
+
+  if (failedBatches > 0) {
+    return NextResponse.json({
+      ok: sent > 0,
+      sent,
+      failedBatches,
+      warning: `${failedBatches} lote(s) falharam ao enviar — ver logs para detalhes.`,
+      campaign: updated,
+    })
+  }
 
   return NextResponse.json({ ok: true, sent, campaign: updated })
 }
