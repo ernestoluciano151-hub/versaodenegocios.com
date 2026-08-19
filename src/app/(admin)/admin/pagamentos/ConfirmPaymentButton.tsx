@@ -13,8 +13,15 @@ export function ConfirmPaymentButton({ paymentId }: { paymentId: string }) {
     if (!window.confirm('Confirmar recebimento do pagamento?')) return
     setLoading(true)
     try {
-      await fetch(`/api/payments/${paymentId}/confirm`, { method: 'POST' })
+      const res = await fetch(`/api/payments/${paymentId}/confirm`, { method: 'POST' })
+      if (!res.ok) {
+        const body = await res.json().catch(() => null)
+        alert(body?.error ?? 'Não foi possível confirmar o pagamento. Tente novamente.')
+        return
+      }
       router.refresh()
+    } catch {
+      alert('Falha de rede ao confirmar o pagamento. Verifique a ligação e tente novamente.')
     } finally {
       setLoading(false)
     }
