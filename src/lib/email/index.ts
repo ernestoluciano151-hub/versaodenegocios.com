@@ -14,14 +14,37 @@ const APP_NAME = 'VN Commerce'
  * noutras áreas (Analytics, Métodos de Pagamento): a configuração existia
  * na UI mas nunca chegava a ser usada.
  */
-async function resolveEmailConfig(): Promise<{ apiKey: string; from: string }> {
+async function resolveEmailConfig(): Promise<{ apiKey: string; from: string; supportEmail?: string }> {
   const settings = await prisma.emailSettings.findUnique({ where: { id: SINGLETON_ID } }).catch(() => null)
 
   const apiKey = settings?.apiKey || process.env.RESEND_API_KEY || ''
   const fromEmail = settings?.fromEmail || process.env.EMAIL_FROM || 'noreply@versaodenegocios.com'
   const fromName = settings?.fromName || APP_NAME
 
-  return { apiKey, from: `${fromName} <${fromEmail}>` }
+  return { apiKey, from: `${fromName} <${fromEmail}>`, supportEmail: settings?.supportEmail ?? undefined }
+}
+
+/**
+ * Moldura HTML partilhada por todos os emails transaccionais. Antes, os
+ * emails de pedido (confirmação, envio, actualização de estado) usavam HTML
+ * "cru" — <h1> sem estilo, <table border="1" cellpadding="8">, sem rodapé —
+ * enquanto o email de recuperação de palavra-passe já usava um template com
+ * CSS inline, botão estilizado e rodapé de marca. Essa diferença de aspecto
+ * é exactamente o tipo de sinal que os filtros de conteúdo do Gmail/Outlook
+ * usam para pontuar mensagens como suspeitas: HTML antigo e sem marca "cheira"
+ * a spam, um template consistente e bem formatado "cheira" a transaccional
+ * legítimo. Uniformizar todos os templates com esta moldura ajuda a
+ * consistência de entrega — mas a verificação de domínio (SPF/DKIM/DMARC) no
+ * Resend continua a ser o factor mais determinante.
+ */
+function wrapEmail(bodyHtml: string): string {
+  return `
+    <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#111">
+      ${bodyHtml}
+      <hr style="border:none;border-top:1px solid #eee;margin:24px 0"/>
+      <p style="color:#999;font-size:12px">${APP_NAME} — Produtos Eletrónicos</p>
+    </div>
+  `
 }
 
 interface SendPayload {
@@ -75,23 +98,36 @@ export async function sendOrderConfirmation(to: string, order: {
   total: number
   items: Array<{ name: string; quantity: number; price: number }>
 }) {
+  const { supportEmail } = await resolveEmailConfig()
   const itemsHtml = order.items
-    .map(i => `<tr><td>${i.name}</td><td>${i.quantity}</td><td>Kz ${i.price.toFixed(2)}</td></tr>`)
+    .map(i => `
+      <tr>
+        <td style="padding:8px;border-bottom:1px solid #eee">${i.name}</td>
+        <td style="padding:8px;border-bottom:1px solid #eee;text-align:center">${i.quantity}</td>
+        <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">Kz ${i.price.toFixed(2)}</td>
+      </tr>`)
     .join('')
 
   return sendEmail({
     to,
+    replyTo: supportEmail,
     subject: `Pedido #${order.id.slice(-8).toUpperCase()} recebido — ${APP_NAME}`,
-    html: `
-      <h1>Obrigado, ${order.customerName}!</h1>
-      <p>O seu pedido foi recebido e está a ser processado.</p>
-      <table border="1" cellpadding="8" style="border-collapse:collapse;width:100%">
-        <thead><tr><th>Produto</th><th>Qtd</th><th>Preço</th></tr></thead>
+    html: wrapEmail(`
+      <h2 style="color:#111">Obrigado, ${order.customerName}!</h2>
+      <p>O seu pedido <strong>#${order.id.slice(-8).toUpperCase()}</strong> foi recebido e está a ser processado.</p>
+      <table style="border-collapse:collapse;width:100%;margin:16px 0">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:8px;border-bottom:2px solid #111;font-size:12px;color:#666">Produto</th>
+            <th style="text-align:center;padding:8px;border-bottom:2px solid #111;font-size:12px;color:#666">Qtd</th>
+            <th style="text-align:right;padding:8px;border-bottom:2px solid #111;font-size:12px;color:#666">Preço</th>
+          </tr>
+        </thead>
         <tbody>${itemsHtml}</tbody>
       </table>
-      <p><strong>Total: Kz ${order.total.toFixed(2)}</strong></p>
+      <p style="text-align:right;font-size:16px"><strong>Total: Kz ${order.total.toFixed(2)}</strong></p>
       <p>Entraremos em contacto brevemente para confirmar o seu pedido.</p>
-    `,
+    `),
   })
 }
 
@@ -101,14 +137,16 @@ export async function sendOrderStatusUpdate(to: string, data: {
   status: string
   message: string
 }) {
+  const { supportEmail } = await resolveEmailConfig()
   return sendEmail({
     to,
+    replyTo: supportEmail,
     subject: `Actualização do pedido #${data.orderId.slice(-8).toUpperCase()} — ${APP_NAME}`,
-    html: `
-      <h1>Olá, ${data.customerName}!</h1>
+    html: wrapEmail(`
+      <h2 style="color:#111">Olá, ${data.customerName}!</h2>
       <p>${data.message}</p>
       <p>Estado actual: <strong>${data.status}</strong></p>
-    `,
+    `),
   })
 }
 
@@ -117,19 +155,20 @@ export async function sendCartAbandonmentEmail(to: string, data: {
   cartItems: Array<{ name: string; price: number }>
   recoverUrl: string
 }) {
-  const itemsHtml = data.cartItems.map(i => `<li>${i.name} — Kz ${i.price.toFixed(2)}</li>`).join('')
+  const itemsHtml = data.cartItems.map(i => `<li style="margin-bottom:4px">${i.name} — Kz ${i.price.toFixed(2)}</li>`).join('')
 
   return sendEmail({
     to,
     subject: `Esqueceu-se de algo? — ${APP_NAME}`,
-    html: `
-      <h1>Olá, ${data.customerName}!</h1>
+    html: wrapEmail(`
+      <h2 style="color:#111">Olá, ${data.customerName}!</h2>
       <p>Deixou alguns artigos no carrinho:</p>
-      <ul>${itemsHtml}</ul>
-      <a href="${data.recoverUrl}" style="background:#f97316;color:white;padding:12px 24px;text-decoration:none;border-radius:6px">
+      <ul style="padding-left:20px">${itemsHtml}</ul>
+      <a href="${data.recoverUrl}"
+        style="display:inline-block;background:#f97316;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;margin:16px 0">
         Completar compra
       </a>
-    `,
+    `),
   })
 }
 
@@ -159,17 +198,19 @@ export async function sendOrderShippedEmail(to: string, data: {
   orderId: string
   trackingNumber?: string
 }) {
+  const { supportEmail } = await resolveEmailConfig()
   return sendEmail({
     to,
+    replyTo: supportEmail,
     subject: `Pedido #${data.orderId.slice(-8).toUpperCase()} enviado — ${APP_NAME}`,
-    html: `
-      <h1>O seu pedido foi enviado! 🚚</h1>
+    html: wrapEmail(`
+      <h2 style="color:#111">O seu pedido foi enviado! 🚚</h2>
       <p>Olá, ${data.customerName}!</p>
       <p>O seu pedido <strong>#${data.orderId.slice(-8).toUpperCase()}</strong> foi despachado.</p>
       ${data.trackingNumber ? `<p>Número de rastreio: <strong>${data.trackingNumber}</strong></p>` : ''}
       <p>Aguarde a entrega nos próximos dias úteis.</p>
       <p>Obrigado pela sua compra!</p>
-    `,
+    `),
   })
 }
 
@@ -184,11 +225,11 @@ export async function sendAdminNewOrder(data: {
   return sendEmail({
     to: adminEmail,
     subject: `Novo pedido #${data.orderId.slice(-8).toUpperCase()} — Kz ${data.total.toFixed(2)}`,
-    html: `
-      <h1>Novo pedido recebido!</h1>
+    html: wrapEmail(`
+      <h2 style="color:#111">Novo pedido recebido!</h2>
       <p>Cliente: <strong>${data.customerName}</strong></p>
       <p>Total: <strong>Kz ${data.total.toFixed(2)}</strong></p>
-    `,
+    `),
   })
 }
 
@@ -199,20 +240,16 @@ export async function sendPasswordResetEmail(to: string, data: {
   return sendEmail({
     to,
     subject: `Recuperação de palavra-passe — ${APP_NAME}`,
-    html: `
-      <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
-        <h2 style="color:#111">Recuperar palavra-passe</h2>
-        <p>Olá, <strong>${data.customerName}</strong>!</p>
-        <p>Recebemos um pedido para recuperar a palavra-passe da sua conta.</p>
-        <p>Clique no botão abaixo para definir uma nova palavra-passe. O link é válido durante <strong>1 hora</strong>.</p>
-        <a href="${data.resetUrl}"
-          style="display:inline-block;background:#f97316;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;margin:16px 0">
-          Redefinir palavra-passe
-        </a>
-        <p style="color:#666;font-size:13px">Se não pediu a recuperação, pode ignorar este email.</p>
-        <hr style="border:none;border-top:1px solid #eee;margin:24px 0"/>
-        <p style="color:#999;font-size:12px">${APP_NAME} — Produtos Eletrónicos</p>
-      </div>
-    `,
+    html: wrapEmail(`
+      <h2 style="color:#111">Recuperar palavra-passe</h2>
+      <p>Olá, <strong>${data.customerName}</strong>!</p>
+      <p>Recebemos um pedido para recuperar a palavra-passe da sua conta.</p>
+      <p>Clique no botão abaixo para definir uma nova palavra-passe. O link é válido durante <strong>1 hora</strong>.</p>
+      <a href="${data.resetUrl}"
+        style="display:inline-block;background:#f97316;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;margin:16px 0">
+        Redefinir palavra-passe
+      </a>
+      <p style="color:#666;font-size:13px">Se não pediu a recuperação, pode ignorar este email.</p>
+    `),
   })
 }
