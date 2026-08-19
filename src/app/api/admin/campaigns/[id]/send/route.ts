@@ -33,6 +33,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const fromName = settings?.fromName || 'VN Commerce'
   const resend = new Resend(apiKey)
   const FROM = `${fromName} <${fromEmail}>`
+  const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://versaodenegocios.com'
 
   // Send in batches of 50 (Resend batch limit)
   const batchSize = 50
@@ -41,20 +42,34 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   for (let i = 0; i < subscribers.length; i += batchSize) {
     const batch = subscribers.slice(i, i + batchSize)
     const { error: batchError } = await resend.batch.send(
-      batch.map(sub => ({
-        from: FROM,
-        to: sub.email,
-        subject: campaign.subject,
-        html: `
-          <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
-            ${campaign.body}
-            <hr style="border:none;border-top:1px solid #eee;margin:32px 0"/>
-            <p style="color:#999;font-size:11px;text-align:center">
-              Recebeu este email porque subscreveu a newsletter da VN Commerce.
-            </p>
-          </div>
-        `,
-      }))
+      batch.map(sub => {
+        const unsubUrl = `${SITE_URL}/api/newsletter/unsubscribe?id=${sub.id}`
+        return {
+          from: FROM,
+          to: sub.email,
+          subject: campaign.subject,
+          // Cabeçalhos de cancelamento de um clique (RFC 2369 / RFC 8058) —
+          // é o que faz o Gmail/Outlook mostrarem o botão "Cancelar
+          // subscrição" nativo junto ao remetente. Sem isto, campanhas em
+          // massa são um dos sinais mais fortes que os filtros de spam usam
+          // para penalizar o domínio inteiro (incluindo os emails
+          // transacionais, como confirmação de encomenda).
+          headers: {
+            'List-Unsubscribe': `<${unsubUrl}>`,
+            'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+          },
+          html: `
+            <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+              ${campaign.body}
+              <hr style="border:none;border-top:1px solid #eee;margin:32px 0"/>
+              <p style="color:#999;font-size:11px;text-align:center">
+                Recebeu este email porque subscreveu a newsletter da VN Commerce.
+                <a href="${unsubUrl}" style="color:#999">Cancelar subscrição</a>
+              </p>
+            </div>
+          `,
+        }
+      })
     )
     if (batchError) {
       failedBatches++

@@ -51,7 +51,16 @@ async function sendEmail(payload: SendPayload): Promise<void> {
   }
 
   const resend = new Resend(apiKey)
-  const { error } = await resend.emails.send({ from, ...payload })
+  // Enviar sempre também uma versão em texto simples — emails só-HTML (sem
+  // alternativa "text/plain") são um sinal comum usado pelos filtros de
+  // spam do Gmail/Outlook para penalizar a pontuação da mensagem.
+  const text = payload.html
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  const { error } = await resend.emails.send({ from, ...payload, text })
 
   if (error) {
     const err = new Error(`Falha ao enviar email (${error.name}): ${error.message}`)
