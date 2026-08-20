@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 import { HeroBanner } from '@/components/store/HeroBanner'
+import { CustomOrderPromo } from '@/components/store/CustomOrderPromo'
 import { ProductCard } from '@/components/store/ProductCard'
 import { NewsletterForm } from '@/components/store/NewsletterForm'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -168,6 +169,7 @@ export default function HomePage() {
   return (
     <div>
       <HeroBanner />
+      <CustomOrderPromo />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16">
         {/* Categories */}
