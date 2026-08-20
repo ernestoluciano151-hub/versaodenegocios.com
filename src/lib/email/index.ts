@@ -4,6 +4,12 @@ import { logError } from '@/lib/logger'
 
 const SINGLETON_ID = 'singleton'
 const APP_NAME = 'VN Commerce'
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://versaodenegocios.com'
+// Logo de reserva (marca da VN Commerce em PNG, compatível com clientes de
+// email que não renderizam SVG, como o Outlook de ambiente de trabalho) —
+// usado sempre que o admin não tiver carregado um logo próprio em
+// Configurações → Geral.
+const DEFAULT_LOGO_URL = `${SITE_URL}/icons/icon-192x192.png`
 
 /**
  * Resolve a configuração de email a partir da BD (Configurações → Email,
@@ -14,14 +20,18 @@ const APP_NAME = 'VN Commerce'
  * noutras áreas (Analytics, Métodos de Pagamento): a configuração existia
  * na UI mas nunca chegava a ser usada.
  */
-async function resolveEmailConfig(): Promise<{ apiKey: string; from: string; supportEmail?: string }> {
-  const settings = await prisma.emailSettings.findUnique({ where: { id: SINGLETON_ID } }).catch(() => null)
+async function resolveEmailConfig(): Promise<{ apiKey: string; from: string; supportEmail?: string; logoUrl: string }> {
+  const [settings, store] = await Promise.all([
+    prisma.emailSettings.findUnique({ where: { id: SINGLETON_ID } }).catch(() => null),
+    prisma.storeSettings.findUnique({ where: { id: SINGLETON_ID }, select: { logo: true } }).catch(() => null),
+  ])
 
   const apiKey = settings?.apiKey || process.env.RESEND_API_KEY || ''
   const fromEmail = settings?.fromEmail || process.env.EMAIL_FROM || 'noreply@versaodenegocios.com'
   const fromName = settings?.fromName || APP_NAME
+  const logoUrl = store?.logo || DEFAULT_LOGO_URL
 
-  return { apiKey, from: `${fromName} <${fromEmail}>`, supportEmail: settings?.supportEmail ?? undefined }
+  return { apiKey, from: `${fromName} <${fromEmail}>`, supportEmail: settings?.supportEmail ?? undefined, logoUrl }
 }
 
 /**
@@ -36,10 +46,18 @@ async function resolveEmailConfig(): Promise<{ apiKey: string; from: string; sup
  * legítimo. Uniformizar todos os templates com esta moldura ajuda a
  * consistência de entrega — mas a verificação de domínio (SPF/DKIM/DMARC) no
  * Resend continua a ser o factor mais determinante.
+ *
+ * O cabeçalho com o logo real (em vez de só o avatar com a letra "V" gerado
+ * pelo próprio cliente de email) também ajuda a passar a impressão de
+ * remetente legítimo e reconhecível.
  */
-function wrapEmail(bodyHtml: string): string {
+function wrapEmail(bodyHtml: string, logoUrl: string): string {
   return `
     <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#111">
+      <div style="text-align:center;padding:8px 0 20px">
+        <img src="${logoUrl}" alt="${APP_NAME}" width="56" height="56" style="width:56px;height:56px;border-radius:12px;display:inline-block"/>
+        <div style="font-weight:700;font-size:16px;color:#111;margin-top:8px">${APP_NAME}</div>
+      </div>
       ${bodyHtml}
       <hr style="border:none;border-top:1px solid #eee;margin:24px 0"/>
       <p style="color:#999;font-size:12px">${APP_NAME} — Produtos Eletrónicos</p>
@@ -98,7 +116,7 @@ export async function sendOrderConfirmation(to: string, order: {
   total: number
   items: Array<{ name: string; quantity: number; price: number }>
 }) {
-  const { supportEmail } = await resolveEmailConfig()
+  const { supportEmail, logoUrl } = await resolveEmailConfig()
   const itemsHtml = order.items
     .map(i => `
       <tr>
@@ -127,7 +145,7 @@ export async function sendOrderConfirmation(to: string, order: {
       </table>
       <p style="text-align:right;font-size:16px"><strong>Total: Kz ${order.total.toFixed(2)}</strong></p>
       <p>Entraremos em contacto brevemente para confirmar o seu pedido.</p>
-    `),
+    `, logoUrl),
   })
 }
 
@@ -137,7 +155,7 @@ export async function sendOrderStatusUpdate(to: string, data: {
   status: string
   message: string
 }) {
-  const { supportEmail } = await resolveEmailConfig()
+  const { supportEmail, logoUrl } = await resolveEmailConfig()
   return sendEmail({
     to,
     replyTo: supportEmail,
@@ -146,7 +164,7 @@ export async function sendOrderStatusUpdate(to: string, data: {
       <h2 style="color:#111">Olá, ${data.customerName}!</h2>
       <p>${data.message}</p>
       <p>Estado actual: <strong>${data.status}</strong></p>
-    `),
+    `, logoUrl),
   })
 }
 
@@ -155,6 +173,7 @@ export async function sendCartAbandonmentEmail(to: string, data: {
   cartItems: Array<{ name: string; price: number }>
   recoverUrl: string
 }) {
+  const { logoUrl } = await resolveEmailConfig()
   const itemsHtml = data.cartItems.map(i => `<li style="margin-bottom:4px">${i.name} — Kz ${i.price.toFixed(2)}</li>`).join('')
 
   return sendEmail({
@@ -168,7 +187,7 @@ export async function sendCartAbandonmentEmail(to: string, data: {
         style="display:inline-block;background:#f97316;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;margin:16px 0">
         Completar compra
       </a>
-    `),
+    `, logoUrl),
   })
 }
 
@@ -178,18 +197,19 @@ export async function sendContactEmail(to: string, data: {
   subject?: string
   message: string
 }) {
+  const { logoUrl } = await resolveEmailConfig()
   return sendEmail({
     to,
     replyTo: data.email,
     subject: `[Contacto] ${data.subject?.trim() || 'Nova mensagem'} — ${data.name}`,
-    html: `
-      <h2>Nova mensagem de contacto</h2>
+    html: wrapEmail(`
+      <h2 style="color:#111">Nova mensagem de contacto</h2>
       <p><strong>Nome:</strong> ${data.name}</p>
       <p><strong>Email:</strong> ${data.email}</p>
       ${data.subject ? `<p><strong>Assunto:</strong> ${data.subject}</p>` : ''}
-      <hr/>
+      <hr style="border:none;border-top:1px solid #eee;margin:16px 0"/>
       <p>${data.message.replace(/\n/g, '<br/>')}</p>
-    `,
+    `, logoUrl),
   })
 }
 
@@ -198,7 +218,7 @@ export async function sendOrderShippedEmail(to: string, data: {
   orderId: string
   trackingNumber?: string
 }) {
-  const { supportEmail } = await resolveEmailConfig()
+  const { supportEmail, logoUrl } = await resolveEmailConfig()
   return sendEmail({
     to,
     replyTo: supportEmail,
@@ -210,7 +230,7 @@ export async function sendOrderShippedEmail(to: string, data: {
       ${data.trackingNumber ? `<p>Número de rastreio: <strong>${data.trackingNumber}</strong></p>` : ''}
       <p>Aguarde a entrega nos próximos dias úteis.</p>
       <p>Obrigado pela sua compra!</p>
-    `),
+    `, logoUrl),
   })
 }
 
@@ -221,6 +241,7 @@ export async function sendAdminNewOrder(data: {
 }) {
   const settings = await prisma.emailSettings.findUnique({ where: { id: SINGLETON_ID } }).catch(() => null)
   const adminEmail = settings?.salesEmail || process.env.ADMIN_EMAIL || settings?.fromEmail || process.env.EMAIL_FROM || 'noreply@versaodenegocios.com'
+  const { logoUrl } = await resolveEmailConfig()
 
   return sendEmail({
     to: adminEmail,
@@ -229,7 +250,7 @@ export async function sendAdminNewOrder(data: {
       <h2 style="color:#111">Novo pedido recebido!</h2>
       <p>Cliente: <strong>${data.customerName}</strong></p>
       <p>Total: <strong>Kz ${data.total.toFixed(2)}</strong></p>
-    `),
+    `, logoUrl),
   })
 }
 
@@ -237,6 +258,7 @@ export async function sendPasswordResetEmail(to: string, data: {
   customerName: string
   resetUrl: string
 }) {
+  const { logoUrl } = await resolveEmailConfig()
   return sendEmail({
     to,
     subject: `Recuperação de palavra-passe — ${APP_NAME}`,
@@ -250,6 +272,6 @@ export async function sendPasswordResetEmail(to: string, data: {
         Redefinir palavra-passe
       </a>
       <p style="color:#666;font-size:13px">Se não pediu a recuperação, pode ignorar este email.</p>
-    `),
+    `, logoUrl),
   })
 }
