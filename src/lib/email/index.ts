@@ -47,20 +47,23 @@ async function resolveEmailConfig(): Promise<{ apiKey: string; from: string; sup
  * consistência de entrega — mas a verificação de domínio (SPF/DKIM/DMARC) no
  * Resend continua a ser o factor mais determinante.
  *
- * O cabeçalho com o logo real (em vez de só o avatar com a letra "V" gerado
- * pelo próprio cliente de email) também ajuda a passar a impressão de
- * remetente legítimo e reconhecível.
+ * O logo aparece no fim do email, como assinatura, por baixo do corpo da
+ * mensagem — não no topo. (O avatar circular com a letra "V" que aparece
+ * junto ao nome do remetente na caixa de entrada é gerado pelo próprio
+ * Gmail/Outlook a partir da inicial do nome — não faz parte deste HTML e
+ * não pode ser alterado por aqui; exigiria configurar BIMI, ver nota no
+ * ficheiro de auditoria.)
  */
 function wrapEmail(bodyHtml: string, logoUrl: string): string {
   return `
     <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#111">
-      <div style="text-align:center;padding:8px 0 20px">
-        <img src="${logoUrl}" alt="${APP_NAME}" width="56" height="56" style="width:56px;height:56px;border-radius:12px;display:inline-block"/>
-        <div style="font-weight:700;font-size:16px;color:#111;margin-top:8px">${APP_NAME}</div>
-      </div>
       ${bodyHtml}
       <hr style="border:none;border-top:1px solid #eee;margin:24px 0"/>
-      <p style="color:#999;font-size:12px">${APP_NAME} — Produtos Eletrónicos</p>
+      <div style="text-align:center;padding:4px 0 12px">
+        <img src="${logoUrl}" alt="${APP_NAME}" width="48" height="48" style="width:48px;height:48px;border-radius:10px;display:inline-block"/>
+        <div style="font-weight:700;font-size:14px;color:#111;margin-top:6px">${APP_NAME}</div>
+      </div>
+      <p style="color:#999;font-size:12px;text-align:center">${APP_NAME} — Produtos Eletrónicos</p>
     </div>
   `
 }
