@@ -1,164 +1,166 @@
 import { PaymentGateway, PaymentIntent, PaymentResult } from './payment-gateway.interface'
 
 /**
- * EMIS GPO — Multicaixa Express iFrame Adapter
+ * EMIS GPO — Integração directa via webframe (oficial)
  *
- * Integração via iFrame conforme documentação EMIS.
- * O cliente efectua o pagamento dentro do iFrame embebido na página /pagamento/emis.
- * Quando a EMIS disponibilizar a API completa, basta substituir este adapter
- * sem alterar o restante sistema.
+ * Reescrito a partir do "Manual de Integração – GPO API" (v02.80, EMIS, 2023-07-07)
+ * e do ficheiro "GPO_EndPoints Exemplos v2.01" fornecidos pela EMIS após a
+ * adesão oficial da VN Commerce ao GPO (Comerciante nº 340472, POS nº 548377).
  *
- * Variáveis de ambiente necessárias:
- *   EMIS_MERCHANT_ID   — ID do comerciante (ex: 340472)
- *   EMIS_FRAME_TOKEN   — Token do iFrame obtido no portal EMIS
- *   EMIS_IFRAME_URL    — URL base do iFrame (ex: https://pagamentonline.emis.co.ao/online-payment-gateway/portal)
- *   EMIS_API_BASE      — URL base da API EMIS (ex: https://pagamentonline.emis.co.ao/online-payment-gateway/api)
- *   EMIS_CALLBACK_URL  — URL de callback após pagamento (ex: https://versaodenegocios.com/pagamento/emis/callback)
- *   EMIS_WEBHOOK_SECRET — Secret para verificar webhooks da EMIS
+ * A versão anterior deste ficheiro chamava endpoints inventados
+ * (/v2/merchants/{id}/references) que nunca existiram na API real — foi
+ * escrita antes de termos acesso à documentação oficial. Esta versão segue
+ * exactamente o fluxo "Integração via webframe" (secção 2.1 do manual):
+ *
+ *   1. POST .../frameToken com a Frame Token do comerciante → devolve um
+ *      "token de compra" (id) de utilização única, válido por alguns minutos.
+ *   2. O cliente é redireccionado/embutido numa iframe em .../frame?token={id},
+ *      onde introduz o número de telemóvel MULTICAIXA Express e aprova a
+ *      transacção na app do telemóvel.
+ *   3. A EMIS notifica o resultado por duas vias em simultâneo: mensagem
+ *      postMessage à iframe, e um POST server-to-server para o callbackUrl
+ *      indicado no passo 1 (tratado em /api/webhooks/emis).
+ *
+ * Este fluxo não precisa de OAuth — só da Frame Token do comerciante, que
+ * SÓ pode ser obtida por quem tiver acesso à conta:
+ *
+ *   Portal GPO → https://pagamentonline.emis.co.ao/online-payment-gateway/portal/
+ *   → ícone de utilizador (canto superior direito) → Perfil do Utilizador → "Frame token"
+ *
+ * Variáveis de ambiente:
+ *   EMIS_FRAME_TOKEN     — Frame Token do comerciante (obrigatório, ver acima)
+ *   EMIS_MERCHANT_ID     — Código do comerciante EMIS (default: 340472)
+ *   EMIS_GPO_PORTAL_URL  — Base do portal GPO (default: https://pagamentonline.emis.co.ao/online-payment-gateway/portal)
+ *   EMIS_CALLBACK_URL    — URL server-to-server notificado pela EMIS após o pagamento
  */
 
-const EMIS_API_BASE =
-  process.env.EMIS_API_BASE ??
-  'https://pagamentonline.emis.co.ao/online-payment-gateway/api'
-
-const EMIS_IFRAME_URL =
-  process.env.EMIS_IFRAME_URL ??
+const EMIS_GPO_PORTAL_URL =
+  process.env.EMIS_GPO_PORTAL_URL ??
   'https://pagamentonline.emis.co.ao/online-payment-gateway/portal'
 
 export class EmisGpoProvider implements PaymentGateway {
-  name = 'Multicaixa Express'
+  name = 'Multicaixa Express (EMIS GPO)'
   type = 'multicaixa_express'
 
   private readonly merchantId = process.env.EMIS_MERCHANT_ID ?? '340472'
   private readonly frameToken = process.env.EMIS_FRAME_TOKEN ?? ''
   private readonly callbackUrl =
     process.env.EMIS_CALLBACK_URL ??
-    `${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://versaodenegocios.com'}/pagamento/emis/callback`
+    `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://versaodenegocios.com'}/api/webhooks/emis`
 
   /**
-   * Cria uma referência de pagamento na EMIS e devolve a URL do iFrame.
-   *
-   * A EMIS não expõe ainda autenticação pública — o iFrame é configurado
-   * directamente com o frameToken. Quando a EMIS disponibilizar credenciais
-   * de API, adicionar aqui a chamada POST /v2/merchants/{id}/references para
-   * obter uma referência gerada pela EMIS e passar o seu ID para o iFrame.
+   * A referência do comerciante só aceita letras/números, até 15 caracteres
+   * (Tabela 1 do manual). O id do pedido (cuid) é mais comprido, por isso
+   * usamos os últimos 15 caracteres alfanuméricos, que já é o suficiente
+   * para sermos capazes de encontrar o Payment correspondente no webhook.
+   */
+  private buildReference(orderId: string): string {
+    return orderId.replace(/[^a-zA-Z0-9]/g, '').slice(-15)
+  }
+
+  /**
+   * Solicita um token de compra (frameToken) à EMIS e devolve o URL da
+   * iframe onde o cliente vai concluir o pagamento.
    */
   async createPayment(intent: PaymentIntent): Promise<PaymentResult> {
     if (!this.frameToken) {
-      throw new Error('EMIS_FRAME_TOKEN não configurado.')
-    }
-
-    // Tentativa de criar referência via API EMIS (quando disponível)
-    let emisReference: string | null = null
-    try {
-      const res = await fetch(
-        `${EMIS_API_BASE}/v2/merchants/${this.merchantId}/references`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            amount: Math.round(intent.amount * 100), // centavos
-            currency: intent.currency ?? 'AOA',
-            reference: intent.orderId,
-            description: `VN Commerce — Pedido ${intent.orderId}`,
-            callbackUrl: this.callbackUrl,
-          }),
-        },
-      )
-      if (res.ok) {
-        const data = (await res.json()) as { referenceId?: string; id?: string }
-        emisReference = data.referenceId ?? data.id ?? null
+      return {
+        success: false,
+        transactionReference: intent.orderId,
+        error: 'EMIS_FRAME_TOKEN não configurado — obtenha-o no Portal GPO (Perfil do Utilizador → Frame token) e configure a variável de ambiente.',
       }
-    } catch {
-      // API ainda não disponível — continua com iFrame por frameToken
     }
 
-    // Constrói URL do iFrame
-    const params = new URLSearchParams({
-      frameToken: this.frameToken,
-      amount: String(Math.round(intent.amount * 100)),
-      currency: intent.currency ?? 'AOA',
-      orderId: intent.orderId,
-      callbackUrl: this.callbackUrl,
-    })
-    if (emisReference) params.set('referenceId', emisReference)
-    if (intent.customerName) params.set('customerName', intent.customerName)
-    if (intent.customerEmail) params.set('customerEmail', intent.customerEmail)
+    const reference = this.buildReference(intent.orderId)
 
-    const iframeUrl = `${EMIS_IFRAME_URL}?${params.toString()}`
+    let res: Response
+    try {
+      res = await fetch(`${EMIS_GPO_PORTAL_URL}/frameToken`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference,
+          amount: Number(intent.amount.toFixed(2)),
+          token: this.frameToken,
+          // Este provider serve apenas o método Multicaixa Express — o
+          // pagamento por cartão fica desactivado na iframe.
+          mobile: 'PAYMENT',
+          card: 'DISABLED',
+          qrCode: 'DISABLED',
+          callbackUrl: this.callbackUrl,
+        }),
+      })
+    } catch {
+      return {
+        success: false,
+        transactionReference: intent.orderId,
+        error: 'Não foi possível contactar a EMIS GPO. Tente novamente.',
+      }
+    }
+
+    if (!res.ok) {
+      let message = `Falha ao criar token de compra na EMIS GPO (HTTP ${res.status}).`
+      try {
+        const body = (await res.json()) as { message?: string; code?: number }
+        if (body?.message) message = body.message
+      } catch { /* corpo sem JSON — mantém mensagem genérica */ }
+      return { success: false, transactionReference: intent.orderId, error: message }
+    }
+
+    const data = (await res.json()) as { id?: string; timeToLive?: number }
+    if (!data.id) {
+      return { success: false, transactionReference: intent.orderId, error: 'Resposta inesperada da EMIS GPO (sem id de token de compra).' }
+    }
 
     return {
       success: true,
-      transactionReference: emisReference ?? `EMIS-${intent.orderId}-${Date.now()}`,
-      iframeUrl,
-      gatewayResponse: { provider: 'EMIS_GPO', merchantId: this.merchantId, emisReference },
+      transactionReference: data.id,
+      iframeUrl: `${EMIS_GPO_PORTAL_URL}/frame?token=${data.id}`,
+      gatewayResponse: {
+        provider: 'EMIS_GPO_DIRECT',
+        merchantId: this.merchantId,
+        purchaseTokenId: data.id,
+        merchantReference: reference,
+        timeToLive: data.timeToLive,
+      },
     }
   }
 
   /**
-   * Verifica o estado de um pagamento consultando a EMIS.
+   * O fluxo webframe não expõe um endpoint de consulta de estado sem OAuth
+   * (esse só existe nos webservices REST, que exigem client_id/client_secret
+   * próprios — não incluídos no acesso webframe). A confirmação chega
+   * sempre pelo callbackUrl (ver /api/webhooks/emis), por isso aqui apenas
+   * devolvemos "pendente" sem tentar activamente consultar a EMIS.
    */
   async verifyPayment(transactionReference: string): Promise<PaymentResult> {
-    if (!transactionReference.startsWith('EMIS-')) {
-      // Referência real da EMIS — consultar API
-      try {
-        const res = await fetch(
-          `${EMIS_API_BASE}/v2/merchants/${this.merchantId}/references/${transactionReference}`,
-          { headers: { 'Content-Type': 'application/json' } },
-        )
-        if (res.ok) {
-          const data = (await res.json()) as { status?: string; paid?: boolean }
-          const paid = data.paid === true || data.status === 'PAID' || data.status === 'SUCCESS'
-          return {
-            success: paid,
-            transactionReference,
-            gatewayResponse: data as Record<string, unknown>,
-          }
-        }
-      } catch {
-        // API indisponível — devolver pending
-      }
+    return {
+      success: false,
+      transactionReference,
+      error: 'A aguardar confirmação via callback da EMIS GPO.',
     }
-
-    // Fallback: verificação pendente
-    return { success: false, transactionReference, error: 'Estado de pagamento não confirmado.' }
   }
 
   /**
-   * Cancelamento de referência EMIS.
+   * Sem OAuth/webservices REST configurados não há um endpoint de
+   * cancelamento disponível para o token de compra (que expira sozinho ao
+   * fim do timeToLive). O cancelamento do pedido em si continua a ser
+   * tratado localmente pelo checkout/admin.
    */
   async cancelPayment(transactionReference: string): Promise<PaymentResult> {
-    try {
-      const res = await fetch(
-        `${EMIS_API_BASE}/v2/merchants/${this.merchantId}/references/${transactionReference}/cancel`,
-        { method: 'POST', headers: { 'Content-Type': 'application/json' } },
-      )
-      return { success: res.ok, transactionReference }
-    } catch {
-      return { success: false, transactionReference, error: 'Não foi possível cancelar o pagamento.' }
-    }
+    return { success: false, transactionReference, error: 'Cancelamento automático não disponível — o token de compra expira sozinho.' }
   }
 
   /**
-   * Processa o webhook/callback da EMIS.
-   * Verificar a assinatura com EMIS_WEBHOOK_SECRET quando a EMIS disponibilizar.
+   * Validação do payload recebido em /api/webhooks/emis. A EMIS envia o
+   * objecto "Transaction" descrito no serviço "Consulta de uma Transação"
+   * (secção 4.1.8): { id, status, transactionType, amount, reference: { id },
+   * merchantReferenceNumber, ... }. Em caso de erro de processamento pode
+   * ainda vir acompanhado de errorType/errorCode/errorMessage.
    */
-  async handleWebhook(payload: unknown, _signature: string): Promise<void> {
-    // Validação de assinatura (activar quando a EMIS disponibilizar o mecanismo)
-    // const webhookSecret = process.env.EMIS_WEBHOOK_SECRET
-    // if (webhookSecret && signature) { ... verify ... }
-
+  async handleWebhook(payload: unknown): Promise<void> {
     const data = payload as Record<string, unknown>
-    const status = (data.status ?? data.paymentStatus) as string | undefined
-    const transactionId = (data.transactionId ?? data.referenceId ?? data.orderId) as string | undefined
-
-    if (!transactionId) throw new Error('Webhook EMIS: transactionId em falta.')
-
-    // O handler de rota /api/webhooks/emis faz a actualização do pedido —
-    // este método apenas valida o payload.
-    const validStatuses = ['PAID', 'SUCCESS', 'CONFIRMED', 'FAILED', 'CANCELLED', 'EXPIRED']
-    if (status && !validStatuses.includes(status.toUpperCase())) {
-      throw new Error(`Webhook EMIS: status desconhecido "${status}".`)
-    }
+    const id = data.id as string | undefined
+    if (!id) throw new Error('Webhook EMIS GPO: id da transacção em falta.')
   }
 }

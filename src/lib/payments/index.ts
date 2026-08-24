@@ -14,12 +14,18 @@ export type PaymentMethodType =
   | 'paypal'
   | 'stripe'
 
-// Prioridade: AppyPay/EasyPay GPO (API real) → EMIS iFrame (legado) → stub
+// Prioridade: EMIS GPO directo (conta oficial própria, Comerciante 340472) →
+// AppyPay/EasyPay GPO (revendedor, mantido como reserva) → stub.
+// A EMIS directa passou a ser o método principal assim que a VN Commerce
+// aderiu oficialmente ao GPO — deixa de depender de um intermediário. Só
+// falta o EMIS_FRAME_TOKEN (obtido no Portal GPO → Perfil do Utilizador)
+// nas variáveis de ambiente para entrar em produção; até lá, mantém-se o
+// comportamento anterior via AppyPay para não interromper os pagamentos.
 const multicaixaProvider: PaymentGateway =
-  process.env.APPYPAY_CLIENT_ID && process.env.APPYPAY_GPO_KEY
-    ? new AppyPayGpoProvider()
-    : process.env.EMIS_FRAME_TOKEN
-      ? new EmisGpoProvider()
+  process.env.EMIS_FRAME_TOKEN
+    ? new EmisGpoProvider()
+    : process.env.APPYPAY_CLIENT_ID && process.env.APPYPAY_GPO_KEY
+      ? new AppyPayGpoProvider()
       : new MulticaixaExpressProvider()
 
 // Bank Transfer — manual, sem gateway. Cria referência local.

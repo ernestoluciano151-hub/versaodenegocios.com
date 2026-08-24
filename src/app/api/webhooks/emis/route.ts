@@ -29,6 +29,15 @@ interface EmisWebhookPayload {
   amount?: number
   currency?: string
   paidAt?: string
+  // EMIS GPO directo — objecto "Transaction" (secção 4.1.8 do manual oficial),
+  // enviado server-to-server para o callbackUrl indicado no pedido de token
+  // de compra (ver src/lib/payments/emis-gpo.ts)
+  transactionType?: string
+  merchantReferenceNumber?: string
+  reference?: { id?: string }
+  errorType?: string
+  errorCode?: string
+  errorMessage?: string
   [key: string]: unknown
 }
 
@@ -55,29 +64,39 @@ export async function POST(req: NextRequest) {
   // if (webhookSecret) { ... verify HMAC ... }
 
   // AppyPay: merchantTransactionId = orderId nosso; id = chargeId (transactionReference)
+  // EMIS GPO directo: id = id da transacção; reference.id = referência EMIS;
+  // merchantReferenceNumber = a nossa própria referência (ver buildReference em emis-gpo.ts)
   const transactionRef =
     payload.merchantTransactionId ??
     payload.id ??
     payload.transactionId ??
     payload.referenceId ??
+    payload.reference?.id ??
     payload.orderId
-  const rawStatus =
-    payload.responseStatus?.status ?? payload.status ?? payload.paymentStatus ??
-    (payload.responseStatus?.successful === true ? 'SUCCESS' : 'UNKNOWN')
+  const merchantRef = payload.merchantReferenceNumber
+  // Se a EMIS devolveu erro explícito (errorType/errorCode), a transacção
+  // falhou mesmo que o campo "status" não venha preenchido nesse cenário.
+  const rawStatus = (payload.errorType || payload.errorCode)
+    ? 'FAILED'
+    : payload.responseStatus?.status ?? payload.status ?? payload.paymentStatus ??
+      (payload.responseStatus?.successful === true ? 'SUCCESS' : 'UNKNOWN')
 
-  if (!transactionRef) {
+  if (!transactionRef && !merchantRef) {
     return NextResponse.json({ error: 'transactionId em falta.' }, { status: 400 })
   }
 
   const internalStatus = mapStatus(rawStatus)
 
   try {
-    // Encontrar o registo de pagamento pela referência (chargeId) ou pelo orderId
+    // Encontrar o registo de pagamento pela referência (chargeId), pelo
+    // orderId, ou — no caso da EMIS GPO directa — pela nossa própria
+    // referência (merchantReferenceNumber), que corresponde sempre aos
+    // últimos 15 caracteres do id do pedido (ver buildReference em emis-gpo.ts).
     const payment = await prisma.payment.findFirst({
       where: {
         OR: [
-          { transactionReference: { contains: transactionRef } },
-          { orderId: transactionRef },
+          ...(transactionRef ? [{ transactionReference: { contains: transactionRef } }, { orderId: transactionRef }] : []),
+          ...(merchantRef && merchantRef.length >= 6 ? [{ orderId: { endsWith: merchantRef } }] : []),
         ],
       },
       orderBy: { createdAt: 'desc' },

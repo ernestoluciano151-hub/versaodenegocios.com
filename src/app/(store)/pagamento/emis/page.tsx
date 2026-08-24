@@ -1,17 +1,30 @@
 'use client'
 
 import { useSearchParams, useRouter } from 'next/navigation'
-import { useEffect, useState, Suspense } from 'react'
+import { useEffect, useState, useCallback, Suspense } from 'react'
 import { CheckCircle, XCircle, Loader2, Smartphone, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 /**
- * Página de espera do pagamento Multicaixa Express (AppyPay/EasyPay GPO).
+ * Página de espera/conclusão do pagamento Multicaixa Express.
  *
- * O cliente recebeu um push na app Multicaixa Express e tem ~90 segundos
- * para aprovar. Esta página faz polling ao estado do pagamento e reage
- * assim que o webhook da EasyPay confirmar.
+ * Suporta dois fluxos, conforme os parâmetros recebidos do checkout:
+ *
+ * 1. iframeUrl presente (EMIS GPO directo) — o cliente conclui o
+ *    pagamento dentro da iframe da EMIS (introduz o número MULTICAIXA
+ *    Express e aprova na app). Esta página escuta a mensagem postMessage
+ *    enviada pela iframe (secção 2.1.3.2.1 do manual GPO) só para acelerar
+ *    a próxima verificação — a confirmação real vem sempre do callback
+ *    server-to-server da EMIS (webhook /api/webhooks/emis), por isso o
+ *    polling ao nosso próprio backend continua a ser a fonte de verdade.
+ *
+ * 2. Sem iframeUrl, apenas awaitApproval (AppyPay/EasyPay) — o push já foi
+ *    enviado pelo servidor para a app do cliente; esta página só mostra a
+ *    contagem decrescente e faz polling.
  */
+
+// Origens válidas para a mensagem postMessage da iframe EMIS GPO
+const EMIS_ORIGINS = ['https://pagamentonline.emis.co.ao', 'https://gpo.emis.co.ao']
 
 const APPROVAL_WINDOW_S = 90
 const POLL_INTERVAL_MS = 4_000
@@ -23,10 +36,42 @@ function McxPaymentContent() {
 
   const orderId = searchParams.get('orderId') ?? ''
   const transactionRef = searchParams.get('ref') ?? ''
+  const iframeUrl = searchParams.get('iframeUrl') ?? ''
 
   const [status, setStatus] = useState<'pending' | 'paid' | 'failed' | 'timeout'>('pending')
   const [pollCount, setPollCount] = useState(0)
   const [secondsLeft, setSecondsLeft] = useState(APPROVAL_WINDOW_S)
+  const [checkingNow, setCheckingNow] = useState(false)
+
+  // Verificação imediata (fora do ciclo normal de polling) — usada quando
+  // a iframe EMIS notifica a conclusão da operação via postMessage.
+  const checkNow = useCallback(async () => {
+    if (!orderId || checkingNow) return
+    setCheckingNow(true)
+    try {
+      const res = await fetch(`/api/payments/verify?orderId=${orderId}&ref=${transactionRef}`)
+      if (res.ok) {
+        const data = (await res.json()) as { status?: string }
+        const s = (data.status ?? '').toLowerCase()
+        if (['paid', 'confirmed', 'success', 'completed'].includes(s)) setStatus('paid')
+        else if (['failed', 'cancelled', 'expired'].includes(s)) setStatus('failed')
+      }
+    } catch { /* mantém-se pendente — o ciclo normal de polling continua */ }
+    finally { setCheckingNow(false) }
+  }, [orderId, transactionRef, checkingNow])
+
+  // Escuta a notificação da iframe EMIS GPO (postMessage)
+  useEffect(() => {
+    if (!iframeUrl) return
+    function receiveMessage(event: MessageEvent) {
+      if (!EMIS_ORIGINS.includes(event.origin)) return
+      // event.data é o id da transacção (aceite ou rejeitada) ou vazio —
+      // em qualquer dos casos vale a pena confirmar já junto do backend.
+      checkNow()
+    }
+    window.addEventListener('message', receiveMessage)
+    return () => window.removeEventListener('message', receiveMessage)
+  }, [iframeUrl, checkNow])
 
   // Countdown visual dos 90 segundos
   useEffect(() => {
@@ -35,15 +80,18 @@ function McxPaymentContent() {
     return () => clearTimeout(t)
   }, [status, secondsLeft])
 
-  // Polling do estado do pagamento
+  // Polling do estado do pagamento. Com iframe (EMIS GPO directa) o cliente
+  // ainda tem de preencher o número e aprovar na app, por isso damos-lhe
+  // uma janela maior antes de mostrar "tempo esgotado" (10 min vs 3 min).
+  const maxPolls = iframeUrl ? 150 : MAX_POLLS
   useEffect(() => {
     if (status !== 'pending' || !orderId) return
-    if (pollCount >= MAX_POLLS) {
-      setStatus('timeout')
-      return
-    }
 
     const timer = setTimeout(async () => {
+      if (pollCount >= maxPolls) {
+        setStatus('timeout')
+        return
+      }
       try {
         const res = await fetch(`/api/payments/verify?orderId=${orderId}&ref=${transactionRef}`)
         if (res.ok) {
@@ -63,7 +111,7 @@ function McxPaymentContent() {
     }, POLL_INTERVAL_MS)
 
     return () => clearTimeout(timer)
-  }, [status, pollCount, orderId, transactionRef])
+  }, [status, pollCount, orderId, transactionRef, maxPolls])
 
   if (!orderId) {
     return (
@@ -120,7 +168,35 @@ function McxPaymentContent() {
     )
   }
 
-  // pending — aguardar aprovação do push MCX Express
+  // pending + iframe EMIS GPO directa — o cliente conclui o pagamento
+  // dentro da iframe (introduz o número MULTICAIXA Express e aprova).
+  if (iframeUrl) {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-10 text-center">
+        <h1 className="text-2xl font-bold text-gray-900 mb-1">Concluir pagamento — MULTICAIXA Express</h1>
+        <p className="text-gray-600 mb-5 text-sm">
+          Introduza o seu número MULTICAIXA Express abaixo e aprove a transacção na app quando receber a notificação.
+        </p>
+        <div className="rounded-xl border border-gray-200 shadow-sm overflow-hidden bg-white mx-auto" style={{ maxWidth: 562 }}>
+          <iframe
+            src={iframeUrl}
+            title="Pagamento MULTICAIXA Express"
+            className="w-full"
+            style={{ minHeight: 816, border: 'none' }}
+          />
+        </div>
+        <div className="mt-5 flex items-center justify-center gap-2 text-gray-500 text-sm">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span>{checkingNow ? 'A verificar o estado do pagamento…' : 'A aguardar confirmação…'}</span>
+        </div>
+        <p className="text-xs text-gray-400 mt-6">
+          Não feche esta página. Ela actualiza automaticamente assim que o pagamento for confirmado.
+        </p>
+      </div>
+    )
+  }
+
+  // pending — aguardar aprovação do push MCX Express (AppyPay)
   const pct = Math.max(0, Math.round((secondsLeft / APPROVAL_WINDOW_S) * 100))
   return (
     <div className="max-w-lg mx-auto px-4 py-24 text-center">

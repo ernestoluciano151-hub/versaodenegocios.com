@@ -329,10 +329,12 @@ export default function CheckoutPage() {
 
       clearCart()
       // Multicaixa Express: aguardar aprovação do push na app MCX Express
+      // (AppyPay) ou concluir na iframe da EMIS GPO directa (iframeUrl).
       if (result.awaitApproval || result.iframeUrl) {
         const params = new URLSearchParams({
           orderId: result.orderId,
           ref: result.transactionReference ?? '',
+          ...(result.iframeUrl ? { iframeUrl: result.iframeUrl } : {}),
         })
         router.push(`/pagamento/emis?${params.toString()}`)
       } else if (result.paymentReference) {
