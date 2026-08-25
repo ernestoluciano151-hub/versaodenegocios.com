@@ -20,7 +20,16 @@ export async function GET() {
       select: { type: true, name: true, status: true, description: true, sortOrder: true },
       orderBy: { sortOrder: 'asc' },
     })
-    return NextResponse.json(methods, {
+    // Com a EMIS GPO directa (EMIS_FRAME_TOKEN configurado) é o próprio
+    // ecrã da EMIS (webframe) que pede o nº de telemóvel MCX Express ao
+    // cliente — pedir também no checkout obrigava a preenchê-lo duas
+    // vezes. Só continua obrigatório enquanto se usa o fallback AppyPay/
+    // EasyPay, que precisa do número à partida para disparar o push.
+    const requiresPhone = !process.env.EMIS_FRAME_TOKEN
+    const withMeta = methods.map((m) =>
+      m.type === 'multicaixa_express' ? { ...m, requiresPhone } : m
+    )
+    return NextResponse.json(withMeta, {
       headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120' },
     })
   } catch (err) {

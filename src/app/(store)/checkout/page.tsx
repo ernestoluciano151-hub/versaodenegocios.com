@@ -139,6 +139,8 @@ interface PaymentMethodMeta {
   status: 'active' | 'inactive' | 'maintenance' | 'coming_soon'
   description: string | null
   sortOrder: number
+  /** Só vem preenchido para 'multicaixa_express' — ver /api/payment-methods */
+  requiresPhone?: boolean
 }
 
 const STATUS_BADGE_LABEL: Record<string, string> = {
@@ -471,8 +473,12 @@ export default function CheckoutPage() {
               </label>
               )}
 
-              {/* Nº de telemóvel MCX Express */}
-              {paymentMethod === 'multicaixa_express' && isMethodActive('multicaixa_express') && (
+              {/* Nº de telemóvel MCX Express — só pedido aqui quando o fallback
+                  AppyPay/EasyPay está activo (precisa dele à partida para
+                  disparar o push). Com a EMIS GPO directa, é a própria
+                  iframe da EMIS que pede o número ao cliente. */}
+              {paymentMethod === 'multicaixa_express' && isMethodActive('multicaixa_express') &&
+                (paymentMethods === null || paymentMethods.multicaixa_express?.requiresPhone) && (
                 <div className="ml-7 p-4 rounded-xl bg-orange-50 border border-orange-200">
                   <Label htmlFor="mcxPhone">Nº de telemóvel associado ao Multicaixa Express *</Label>
                   <Input
@@ -487,6 +493,12 @@ export default function CheckoutPage() {
                     Vai receber uma notificação na app Multicaixa Express para aprovar o pagamento. Tem cerca de 90 segundos para confirmar.
                   </p>
                 </div>
+              )}
+              {paymentMethod === 'multicaixa_express' && isMethodActive('multicaixa_express') &&
+                paymentMethods !== null && paymentMethods.multicaixa_express?.requiresPhone === false && (
+                <p className="ml-7 text-xs text-gray-500">
+                  Vai introduzir o seu número Multicaixa Express no ecrã de pagamento seguinte.
+                </p>
               )}
 
               {/* Pagamento por Referência Multicaixa */}

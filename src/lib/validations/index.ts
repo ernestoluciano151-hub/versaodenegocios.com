@@ -10,12 +10,19 @@ export const cartItemSchema = z.object({
   image: z.string().optional(),
 })
 
-/** Regra: telemóvel MCX Express obrigatório quando o método é multicaixa_express */
+/**
+ * Regra: o nº de telemóvel MCX Express só é validado (formato de 9 dígitos)
+ * SE for fornecido. Deixou de ser obrigatório para 'multicaixa_express'
+ * porque, com a EMIS GPO directa (webframe), é o próprio ecrã da EMIS que
+ * pede o número ao cliente — pedi-lo também aqui obrigava a preenchê-lo
+ * duas vezes. O campo continua a aparecer (opcional) apenas quando o
+ * fallback AppyPay/EasyPay está activo, que ainda precisa dele à partida
+ * para disparar o push (ver requiresPhone em /api/payment-methods).
+ */
 const mcxPhoneRule = {
   check: (d: { paymentMethod: string; mcxPhone?: string }) =>
-    d.paymentMethod !== 'multicaixa_express' ||
-    (d.mcxPhone ?? '').replace(/[\s+-]/g, '').replace(/^244/, '').length === 9,
-  params: { message: 'Indique o nº de telemóvel Multicaixa Express (9 dígitos).', path: ['mcxPhone'] },
+    !d.mcxPhone || d.mcxPhone.replace(/[\s+-]/g, '').replace(/^244/, '').length === 9,
+  params: { message: 'Número de telemóvel Multicaixa Express inválido (9 dígitos).', path: ['mcxPhone'] },
 }
 
 const checkoutBaseSchema = z.object({
