@@ -32,13 +32,13 @@ import { PaymentGateway, PaymentIntent, PaymentResult } from './payment-gateway.
  *   EMIS_MERCHANT_ID     — Código do comerciante EMIS (default: 340472)
  *   EMIS_GPO_PORTAL_URL  — Base do portal GPO (default: https://pagamentonline.emis.co.ao/online-payment-gateway/portal)
  *   EMIS_CALLBACK_URL    — URL server-to-server notificado pela EMIS após o pagamento
- *   EMIS_CSS_URL         — URL do CSS customizado aplicado DENTRO da iframe da EMIS
- *                          (parâmetro oficial "cssUrl", Tabela 1, secção 2.1.2.2 do
- *                          manual). Default: ${SITE_URL}/emis-checkout.css. A EMIS
- *                          carrega este ficheiro no documento da iframe (que corre no
- *                          domínio deles), por isso é a ÚNICA forma de estilizar o
- *                          conteúdo da iframe — CSS do nosso site não consegue
- *                          atravessar o isolamento de origem cruzada do iframe.
+ *
+ * NOTA — parâmetro "cssUrl": o manual documenta um parâmetro para
+ * estilizar a iframe com CSS externo. Testámos (via DevTools, Network tab)
+ * e confirmámos que o próprio GPOWebFrame.ts da EMIS tenta carregar o
+ * ficheiro mas a Content-Security-Policy da PÁGINA DELES bloqueia-o
+ * (0 bytes transferidos, "blocked:csp"). Não é algo que o nosso código
+ * consiga contornar — decidimos não voltar a enviar este parâmetro.
  */
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://versaodenegocios.com'
@@ -66,8 +66,6 @@ export class EmisGpoProvider implements PaymentGateway {
     const sep = base.includes('?') ? '&' : '?'
     return `${base}${sep}key=${encodeURIComponent(secret)}`
   })()
-  private readonly cssUrl =
-    process.env.EMIS_CSS_URL ?? `${SITE_URL}/emis-checkout.css`
 
   /**
    * A referência do comerciante só aceita letras/números, até 15 caracteres

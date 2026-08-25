@@ -2,7 +2,8 @@
 
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useEffect, useState, useCallback, Suspense } from 'react'
-import { CheckCircle, XCircle, Loader2, Smartphone, Clock } from 'lucide-react'
+import { CheckCircle, XCircle, Loader2, Smartphone, Clock, ShieldCheck, ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
 /**
@@ -170,28 +171,79 @@ function McxPaymentContent() {
 
   // pending + iframe EMIS GPO directa — o cliente conclui o pagamento
   // dentro da iframe (introduz o número MULTICAIXA Express e aprova).
+  //
+  // A EMIS bloqueia CSS externo dentro da própria iframe (confirmado via
+  // DevTools — a CSP deles rejeita o parâmetro "cssUrl"), por isso não há
+  // forma de estilizar o conteúdo interno. Para o cliente sentir uma
+  // experiência única e não duas páginas coladas, tratamos a nossa moldura
+  // à volta da iframe como uma continuação visual dela: mesmo fundo branco,
+  // sem contorno a separar as duas, e a marca fica só no cabeçalho e no
+  // rodapé — que são inteiramente nossos e sempre 100% estilizáveis.
   if (iframeUrl) {
     return (
-      <div className="max-w-xl mx-auto px-4 py-10 text-center">
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">Concluir pagamento — MULTICAIXA Express</h1>
-        <p className="text-gray-600 mb-5 text-sm">
-          Introduza o seu número MULTICAIXA Express abaixo e aprove a transacção na app quando receber a notificação.
-        </p>
-        <div className="rounded-xl border border-gray-200 shadow-sm overflow-hidden bg-white mx-auto" style={{ maxWidth: 562 }}>
+      <div className="max-w-xl mx-auto px-4 py-8 sm:py-10">
+        {/* Indicador de progresso — dá continuidade ao checkout que o
+            cliente acabou de preencher, antes de "saltar" para a EMIS. */}
+        <div className="flex items-center justify-center gap-2 mb-6 text-xs font-medium">
+          <span className="flex items-center gap-1.5 text-green-600">
+            <CheckCircle className="w-4 h-4" /> Carrinho
+          </span>
+          <span className="w-6 h-px bg-gray-300" />
+          <span className="flex items-center gap-1.5 text-green-600">
+            <CheckCircle className="w-4 h-4" /> Dados
+          </span>
+          <span className="w-6 h-px bg-gray-300" />
+          <span className="flex items-center gap-1.5 text-orange-600">
+            <span className="w-4 h-4 rounded-full bg-orange-600 text-white flex items-center justify-center text-[10px]">3</span> Pagamento
+          </span>
+        </div>
+
+        <div className="rounded-2xl shadow-sm overflow-hidden bg-white mx-auto border border-gray-200" style={{ maxWidth: 562 }}>
+          {/* Cabeçalho — inteiramente nosso, sem seam visível para a iframe */}
+          <div className="bg-gradient-to-r from-orange-600 to-orange-500 px-5 py-4 text-white">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 flex-shrink-0" />
+              <h1 className="text-base font-bold">Pagamento seguro — MULTICAIXA Express</h1>
+            </div>
+            <p className="text-orange-50 text-xs mt-1">
+              Introduza o seu número Express abaixo e aprove na app quando receber a notificação.
+            </p>
+          </div>
+
           <iframe
             src={iframeUrl}
             title="Pagamento MULTICAIXA Express"
-            className="w-full"
+            className="w-full block"
             style={{ minHeight: 816, border: 'none' }}
           />
         </div>
-        <div className="mt-5 flex items-center justify-center gap-2 text-gray-500 text-sm">
+
+        <div className="max-w-[562px] mx-auto mt-4 flex items-center justify-center gap-2 text-gray-500 text-sm">
           <Loader2 className="w-4 h-4 animate-spin" />
           <span>{checkingNow ? 'A verificar o estado do pagamento…' : 'A aguardar confirmação…'}</span>
         </div>
-        <p className="text-xs text-gray-400 mt-6">
-          Não feche esta página. Ela actualiza automaticamente assim que o pagamento for confirmado.
-        </p>
+
+        {/* Rodapé de confiança — reforça que os dados vão directo para a
+            EMIS, nunca passam pelos nossos servidores. */}
+        <div className="max-w-[562px] mx-auto mt-3 text-center">
+          <p className="text-xs text-gray-400 flex items-center justify-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Processado directamente pela EMIS — não guardamos os seus dados de pagamento.
+          </p>
+          <p className="text-xs text-gray-400 mt-1">
+            Não feche esta página. Ela actualiza automaticamente assim que o pagamento for confirmado.
+          </p>
+        </div>
+
+        <div className="max-w-[562px] mx-auto mt-5 flex items-center justify-center gap-4 text-xs">
+          <Link href="/checkout" className="flex items-center gap-1 text-gray-500 hover:text-gray-700">
+            <ArrowLeft className="w-3.5 h-3.5" /> Voltar ao checkout
+          </Link>
+          <span className="text-gray-300">·</span>
+          <Link href="/contacto" className="text-gray-500 hover:text-gray-700">
+            Precisa de ajuda?
+          </Link>
+        </div>
       </div>
     )
   }
