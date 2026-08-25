@@ -1,0 +1,79 @@
+/*
+ * Estilo customizado da iframe EMIS GPO (MULTICAIXA Express)
+ * Carregado pela EMIS via parâmetro "cssUrl" (secção 2.1.2.2 do Manual de
+ * Integração – GPO API) directamente dentro do documento da iframe, que
+ * corre no domínio deles (pagamentonline.emis.co.ao) — por isso este é o
+ * ÚNICO ficheiro que consegue estilizar esse conteúdo.
+ *
+ * IMPORTANTE — este ficheiro usa selectores genéricos por tag, porque a
+ * EMIS não publica os nomes de classes/IDs internos da iframe. Depois do
+ * deploy, o ideal é abrir um checkout de teste, inspeccionar o HTML real da
+ * iframe (botão direito → Inspeccionar, dentro da própria iframe) e
+ * substituir os selectores abaixo pelos exactos, para um resultado
+ * perfeitamente alinhado. Isto aqui é uma base — não vai quebrar nada se a
+ * EMIS não reconhecer algum selector, simplesmente não terá efeito.
+ */
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, Arial, sans-serif !important;
+  background: #ffffff !important;
+  color: #1f2937 !important;
+}
+
+/* Título / cabeçalhos */
+h1, h2, h3 {
+  color: #1f2937 !important;
+  font-weight: 700 !important;
+}
+
+/* Texto secundário (ex.: "Resumo da Compra" muito claro por defeito) */
+h1, h2 {
+  color: #111827 !important;
+  opacity: 1 !important;
+}
+
+/* Campos de input */
+input[type='text'],
+input[type='tel'],
+input[type='number'] {
+  border: 1px solid #d1d5db !important;
+  border-radius: 10px !important;
+  padding: 12px 14px !important;
+  font-size: 16px !important;
+}
+
+input[type='text']:focus,
+input[type='tel']:focus,
+input[type='number']:focus {
+  border-color: #ea580c !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.15) !important;
+}
+
+/* Botões de acção principal (Finalizar Compra / Pagar) */
+button,
+input[type='submit'],
+input[type='button'] {
+  background-color: #ea580c !important;
+  border-color: #ea580c !important;
+  color: #ffffff !important;
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em !important;
+}
+
+button:hover,
+input[type='submit']:hover {
+  background-color: #c2410c !important;
+  border-color: #c2410c !important;
+}
+
+/* Botões secundários (ex.: Cancelar) */
+button[class*='cancel'],
+button[class*='secondary'],
+.cancel,
+.btn-secondary {
+  background-color: #f3f4f6 !important;
+  color: #1f2937 !important;
+  border-color: #d1d5db !important;
+}

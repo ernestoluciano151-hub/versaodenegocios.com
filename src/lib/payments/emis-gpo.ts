@@ -32,7 +32,16 @@ import { PaymentGateway, PaymentIntent, PaymentResult } from './payment-gateway.
  *   EMIS_MERCHANT_ID     — Código do comerciante EMIS (default: 340472)
  *   EMIS_GPO_PORTAL_URL  — Base do portal GPO (default: https://pagamentonline.emis.co.ao/online-payment-gateway/portal)
  *   EMIS_CALLBACK_URL    — URL server-to-server notificado pela EMIS após o pagamento
+ *   EMIS_CSS_URL         — URL do CSS customizado aplicado DENTRO da iframe da EMIS
+ *                          (parâmetro oficial "cssUrl", Tabela 1, secção 2.1.2.2 do
+ *                          manual). Default: ${SITE_URL}/emis-checkout.css. A EMIS
+ *                          carrega este ficheiro no documento da iframe (que corre no
+ *                          domínio deles), por isso é a ÚNICA forma de estilizar o
+ *                          conteúdo da iframe — CSS do nosso site não consegue
+ *                          atravessar o isolamento de origem cruzada do iframe.
  */
+
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://versaodenegocios.com'
 
 const EMIS_GPO_PORTAL_URL =
   process.env.EMIS_GPO_PORTAL_URL ??
@@ -45,8 +54,9 @@ export class EmisGpoProvider implements PaymentGateway {
   private readonly merchantId = process.env.EMIS_MERCHANT_ID ?? '340472'
   private readonly frameToken = process.env.EMIS_FRAME_TOKEN ?? ''
   private readonly callbackUrl =
-    process.env.EMIS_CALLBACK_URL ??
-    `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://versaodenegocios.com'}/api/webhooks/emis`
+    process.env.EMIS_CALLBACK_URL ?? `${SITE_URL}/api/webhooks/emis`
+  private readonly cssUrl =
+    process.env.EMIS_CSS_URL ?? `${SITE_URL}/emis-checkout.css`
 
   /**
    * A referência do comerciante só aceita letras/números, até 15 caracteres
@@ -88,6 +98,7 @@ export class EmisGpoProvider implements PaymentGateway {
           card: 'DISABLED',
           qrCode: 'DISABLED',
           callbackUrl: this.callbackUrl,
+          cssUrl: this.cssUrl,
         }),
       })
     } catch {
