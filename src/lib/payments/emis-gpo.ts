@@ -53,8 +53,19 @@ export class EmisGpoProvider implements PaymentGateway {
 
   private readonly merchantId = process.env.EMIS_MERCHANT_ID ?? '340472'
   private readonly frameToken = process.env.EMIS_FRAME_TOKEN ?? ''
-  private readonly callbackUrl =
-    process.env.EMIS_CALLBACK_URL ?? `${SITE_URL}/api/webhooks/emis`
+  /**
+   * O callbackUrl leva sempre "?key=EMIS_WEBHOOK_SECRET" quando o segredo
+   * estiver configurado — é a única forma de o nosso webhook confirmar que
+   * o POST realmente veio da EMIS, já que o fluxo webframe não assina o
+   * payload (ver nota de segurança em src/app/api/webhooks/emis/route.ts).
+   */
+  private readonly callbackUrl = (() => {
+    const base = process.env.EMIS_CALLBACK_URL ?? `${SITE_URL}/api/webhooks/emis`
+    const secret = process.env.EMIS_WEBHOOK_SECRET
+    if (!secret) return base
+    const sep = base.includes('?') ? '&' : '?'
+    return `${base}${sep}key=${encodeURIComponent(secret)}`
+  })()
   private readonly cssUrl =
     process.env.EMIS_CSS_URL ?? `${SITE_URL}/emis-checkout.css`
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { logError } from '@/lib/logger'
 import { deductStockOnGpoPayment } from '@/lib/orders/stock'
@@ -13,7 +14,49 @@ export const dynamic = 'force-dynamic'
  *
  * URL a configurar no portal EMIS:
  *   https://versaodenegocios.com/api/webhooks/emis
+ *
+ * SEGURANÇA — o manual oficial da EMIS ("Manual de Integração – GPO API",
+ * secção 2.1.3.2.2) não define nenhum mecanismo de assinatura (HMAC/JWT)
+ * para o callback server-to-server do fluxo webframe — ao contrário do
+ * fluxo REST/OAuth, aqui não há nada no payload que prove que o pedido veio
+ * mesmo da EMIS. Sem protecção, qualquer pessoa que soubesse (ou visse na
+ * própria URL do checkout) o orderId de UM pedido seu poderia fazer um
+ * POST directo para este endpoint a fingir "pago" e levar o produto sem
+ * pagar. Mitigação implementada (dentro do que o fluxo webframe permite):
+ *
+ *   1. Segredo partilhado na própria callbackUrl — vamos anexar
+ *      "?key=EMIS_WEBHOOK_SECRET" ao callbackUrl que enviamos no pedido de
+ *      token de compra (ver src/lib/payments/emis-gpo.ts). A EMIS devolve
+ *      sempre esse URL exacto, por isso só um POST que conheça o segredo é
+ *      aceite. Comparação em tempo constante para evitar timing attacks.
+ *   2. Confirmação cruzada do montante — o valor reportado no callback tem
+ *      de bater certo com o valor do Payment já criado (com uma margem de
+ *      1 cêntimo para arredondamentos), caso contrário é rejeitado.
+ *
+ * Enquanto EMIS_WEBHOOK_SECRET não estiver configurado em produção, o
+ * pedido é aceite na mesma (para não partir pagamentos a meio de uma
+ * migração) mas fica registado um aviso — configurar o segredo é
+ * obrigatório antes de considerar esta integração pronta para produção.
  */
+
+function timingSafeEqualStr(a: string, b: string): boolean {
+  const bufA = Buffer.from(a)
+  const bufB = Buffer.from(b)
+  if (bufA.length !== bufB.length) return false
+  try {
+    return crypto.timingSafeEqual(bufA, bufB)
+  } catch {
+    return false
+  }
+}
+
+/** Verifica o segredo partilhado enviado como ?key= na própria callbackUrl. */
+function verifyWebhookKey(req: NextRequest): { ok: boolean; configured: boolean } {
+  const secret = process.env.EMIS_WEBHOOK_SECRET
+  if (!secret) return { ok: true, configured: false }
+  const provided = req.nextUrl.searchParams.get('key') ?? ''
+  return { ok: timingSafeEqualStr(provided, secret), configured: true }
+}
 
 interface EmisWebhookPayload {
   // AppyPay / EasyPay
@@ -51,17 +94,21 @@ function mapStatus(rawStatus: string): 'pending' | 'paid' | 'failed' | 'cancelle
 }
 
 export async function POST(req: NextRequest) {
+  // Segredo partilhado — ver nota de segurança no topo do ficheiro.
+  const keyCheck = verifyWebhookKey(req)
+  if (!keyCheck.configured) {
+    logError(new Error('EMIS_WEBHOOK_SECRET não configurado — webhook aceite sem verificação.'), 'webhook:emis:unprotected')
+  } else if (!keyCheck.ok) {
+    logError(new Error('Assinatura/segredo inválido no webhook EMIS.'), 'webhook:emis:invalid-key')
+    return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
+  }
+
   let payload: EmisWebhookPayload
   try {
     payload = (await req.json()) as EmisWebhookPayload
   } catch {
     return NextResponse.json({ error: 'Payload inválido.' }, { status: 400 })
   }
-
-  // Verificação de assinatura (activar quando a EMIS disponibilizar)
-  // const signature = req.headers.get('x-emis-signature') ?? ''
-  // const webhookSecret = process.env.EMIS_WEBHOOK_SECRET
-  // if (webhookSecret) { ... verify HMAC ... }
 
   // AppyPay: merchantTransactionId = orderId nosso; id = chargeId (transactionReference)
   // EMIS GPO directo: id = id da transacção; reference.id = referência EMIS;
@@ -100,12 +147,26 @@ export async function POST(req: NextRequest) {
         ],
       },
       orderBy: { createdAt: 'desc' },
-      select: { id: true, orderId: true, paymentStatus: true, paymentMethod: true },
+      select: { id: true, orderId: true, paymentStatus: true, paymentMethod: true, amount: true },
     })
 
     if (!payment) {
       // Pode ser callback de teste — aceitar silenciosamente
       return NextResponse.json({ received: true, note: 'Payment not found' })
+    }
+
+    // Confirmação cruzada do montante — segunda camada de defesa mesmo com
+    // o segredo correcto (protege contra fuga do segredo ou payload
+    // adulterado). Só compara quando a EMIS envia mesmo um "amount".
+    if (internalStatus === 'paid' && typeof payload.amount === 'number') {
+      const expected = Number(payment.amount)
+      if (Math.abs(payload.amount - expected) > 0.01) {
+        logError(
+          new Error(`Montante do webhook (${payload.amount}) não coincide com o Payment (${expected}) — orderId ${payment.orderId}`),
+          'webhook:emis:amount-mismatch'
+        )
+        return NextResponse.json({ error: 'Montante não coincide.' }, { status: 400 })
+      }
     }
 
     // Evitar reprocessar um pagamento já confirmado
@@ -151,7 +212,11 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Suporte a GET para callback redirect do iFrame
+// Suporte a GET para callback redirect do iFrame (não usado pelo fluxo
+// webframe actual — a EMIS confirma sempre via POST server-to-server + o
+// cliente fica na nossa página /pagamento/emis. Mantido por
+// retrocompatibilidade, mas protegido pelo mesmo segredo do POST, já que
+// também está autorizado a alterar o estado de um pagamento.
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const orderId = searchParams.get('orderId') ?? ''
@@ -159,8 +224,12 @@ export async function GET(req: NextRequest) {
   const ref = searchParams.get('ref') ?? searchParams.get('transactionId') ?? ''
 
   const internalStatus = mapStatus(status)
+  const keyCheck = verifyWebhookKey(req)
+  if (!keyCheck.configured) {
+    logError(new Error('EMIS_WEBHOOK_SECRET não configurado — callback GET aceite sem verificação.'), 'webhook:emis:unprotected')
+  }
 
-  if (orderId && ref) {
+  if (orderId && ref && keyCheck.ok) {
     try {
       const payment = await prisma.payment.findFirst({
         where: { orderId },
