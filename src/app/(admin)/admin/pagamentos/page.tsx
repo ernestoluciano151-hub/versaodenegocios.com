@@ -1,5 +1,5 @@
 export const dynamic = 'force-dynamic'
-import { Suspense } from 'react'
+import { Suspense, Fragment } from 'react'
 import { TopBar } from '@/components/admin/TopBar'
 import { prisma } from '@/lib/prisma'
 import { formatCurrency, formatDate } from '@/lib/utils'
@@ -53,7 +53,8 @@ async function PaymentsTable({ status }: { status?: string }) {
         </thead>
         <tbody className="divide-y divide-gray-100">
           {payments.map((payment) => (
-            <tr key={payment.id} className="hover:bg-gray-50 group">
+            <Fragment key={payment.id}>
+            <tr className="hover:bg-gray-50 group">
               <td className="py-3 px-4 font-mono text-xs text-gray-500">
                 {payment.transactionReference?.slice(0, 20) ?? '—'}
               </td>
@@ -91,6 +92,21 @@ async function PaymentsTable({ status }: { status?: string }) {
                 </div>
               </td>
             </tr>
+            {payment.gatewayResponse != null && (
+              <tr key={`${payment.id}-details`} className="bg-gray-50/60">
+                <td colSpan={8} className="px-4 pb-3">
+                  <details className="text-xs">
+                    <summary className="cursor-pointer text-gray-500 hover:text-gray-700 select-none">
+                      Ver resposta técnica da EMIS/gateway
+                    </summary>
+                    <pre className="mt-2 p-3 bg-gray-900 text-gray-100 rounded-lg overflow-x-auto whitespace-pre-wrap break-all">
+                      {JSON.stringify(payment.gatewayResponse, null, 2)}
+                    </pre>
+                  </details>
+                </td>
+              </tr>
+            )}
+            </Fragment>
           ))}
         </tbody>
       </table>
